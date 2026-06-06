@@ -1,0 +1,1268 @@
+player_id,name,nation,position,rating,market_value_eur,club,is_current_callup
+1,R. Mahrez,Algeria,MID,84,20000000,Al Ahli SFC,True
+2,R. Aït-Nouri,Algeria,DEF,81,34500000,Manchester City,True
+3,I. Bennacer,Algeria,MID,80,23000000,Dinamo Zagreb,True
+4,M. Amoura,Algeria,FWD,80,29500000,VfL Wolfsburg,True
+5,R. Bensebaini,Algeria,DEF,79,15000000,Borussia Dortmund,True
+6,A. Gouiri,Algeria,FWD,79,26000000,Olympique de Marseille,True
+7,A. Zorgane,Algeria,MID,78,16000000,Union Saint-Gilloise,True
+8,N. Bentaleb,Algeria,MID,77,9000000,Lille OSC,True
+9,S. Benrahma,Algeria,FWD,77,10500000,NEOM SC,True
+10,H. Aouar,Algeria,MID,77,12000000,Al Ittihad,True
+11,H. Boudaoui,Algeria,MID,77,14000000,OGC Nice,True
+12,H. Abdelli,Algeria,MID,76,10500000,Angers SCO,True
+13,I. Kebbal,Algeria,MID,76,8000000,Paris FC,True
+14,A. Hadj-Moussa,Algeria,FWD,76,12000000,Feyenoord,True
+15,A. Mandi,Algeria,DEF,75,2700000,Lille OSC,True
+16,A. Sâyoud,Algeria,MID,75,2600000,Al Hazem FC,True
+17,B. Bouanani,Algeria,FWD,75,11000000,VfB Stuttgart,True
+18,R. Ghezzal,Algeria,MID,74,2600000,Olympique Lyonnais,True
+19,F. Chaïbi,Algeria,MID,74,8500000,Eintracht Frankfurt,True
+20,H. Belkebla,Algeria,MID,74,3000000,Angers SCO,True
+21,R. Zerrouki,Algeria,MID,73,3300000,FC Twente,True
+22,R. Guitane,Algeria,FWD,73,3600000,GD Estoril Praia,True
+23,A. Kadri,Algeria,MID,73,4000000,KAA Gent,True
+24,M. Belloumi,Algeria,MID,73,4800000,Hull City,True
+25,S. Bendebka,Algeria,MID,72,1600000,Al Fateh,True
+26,A. Bedrane,Algeria,DEF,72,1100000,Damac FC,True
+27,Y. Benzia,Algeria,MID,72,2300000,Al Fayha,False
+28,M. Fares,Algeria,MID,71,1800000,Lazio,False
+29,A. Kendouci,Algeria,MID,71,2400000,FC Lugano,False
+30,I. Maza,Algeria,MID,71,4400000,Bayer 04 Leverkusen,False
+31,L. Martínez,Argentina,FWD,88,99000000,Inter,True
+32,A. Mac Allister,Argentina,MID,87,93000000,Liverpool,True
+33,J. Alvarez,Argentina,FWD,87,107000000,Atlético Madrid,True
+34,P. Dybala,Argentina,MID,86,56500000,Roma,True
+35,L. Messi,Argentina,FWD,86,22000000,Inter Miami,True
+36,E. Martínez,Argentina,GK,85,26500000,Aston Villa,True
+37,E. Fernández,Argentina,MID,84,57000000,Chelsea,True
+38,E. Palacios,Argentina,MID,84,52000000,Bayer 04 Leverkusen,True
+39,R. De Paul,Argentina,MID,84,34500000,Inter Miami,True
+40,G. Lo Celso,Argentina,MID,82,30000000,Real Betis Balompié,True
+41,G. Rulli,Argentina,GK,82,10000000,Olympique de Marseille,True
+42,C. Romero,Argentina,DEF,82,32500000,Tottenham Hotspur,True
+43,N. Otamendi,Argentina,DEF,82,5500000,SL Benfica,True
+44,Á. Di María,Argentina,FWD,82,10000000,Rosario Central,True
+45,L. Balerdi,Argentina,DEF,81,30000000,Olympique de Marseille,True
+46,G. Simeone,Argentina,MID,81,39500000,Atlético Madrid,True
+47,L. Martínez,Argentina,DEF,81,26000000,Manchester United,True
+48,M. Icardi,Argentina,FWD,81,21000000,Galatasaray SK,True
+49,V. Castellanos,Argentina,FWD,80,25000000,Lazio,True
+50,J. Foyth,Argentina,DEF,79,17500000,Villarreal CF,True
+51,F. Medina,Argentina,DEF,79,21500000,Olympique de Marseille,True
+52,T. Almada,Argentina,MID,79,35000000,Atlético Madrid,True
+53,N. Domínguez,Argentina,MID,79,18000000,Nottingham Forest,True
+54,N. Molina,Argentina,DEF,79,18500000,Atlético Madrid,True
+55,W. Benítez,Argentina,GK,79,8500000,Crystal Palace,True
+56,Nico Paz,Argentina,MID,79,38500000,Como,True
+57,P. Gazzaniga,Argentina,GK,79,5500000,Girona FC,False
+58,A. Batalla,Argentina,GK,79,13500000,Rayo Vallecano,False
+59,A. Varela,Argentina,MID,79,25500000,FC Porto,False
+60,J. Musso,Argentina,GK,79,9500000,Atlético Madrid,False
+61,M. Ryan,Australia,GK,78,4600000,Levante UD,True
+62,J. Irvine,Australia,MID,75,4400000,FC St. Pauli,True
+63,C. Goodwin,Australia,MID,73,1900000,Adelaide United,True
+64,H. Souttar,Australia,DEF,73,3300000,Leicester City,True
+65,C. Burgess,Australia,DEF,73,2500000,Swansea City,True
+66,R. McGree,Australia,MID,72,2800000,Middlesbrough,True
+67,M. Luongo,Australia,MID,72,1600000,Millwall FC,True
+68,N. Milanović,Australia,MID,71,2700000,Aberdeen,True
+69,A. Circati,Australia,DEF,71,3900000,Parma,True
+70,M. Boyle,Australia,FWD,71,1500000,Hibernian,True
+71,K. Rowles,Australia,DEF,71,1900000,DC United,True
+72,A. Grant,Australia,DEF,71,1300000,Sydney FC,True
+73,C. Devlin,Australia,MID,71,2200000,Hearts,True
+74,A. O'Neill,Australia,MID,70,1500000,New York City FC,True
+75,B. Borrello,Australia,FWD,70,1600000,Western Sydney Wanderers,True
+76,A. Carter,Australia,FWD,70,1600000,Santa Clara,True
+77,N. D'Agostino,Australia,FWD,70,1900000,Viking FK,True
+78,M. Leckie,Australia,MID,70,725000,Melbourne City FC,True
+79,P. Izzo,Australia,GK,70,1100000,Randers FC,True
+80,R. Teague,Australia,MID,69,2900000,KV Mechelen,True
+81,R. Williams,Australia,FWD,69,1200000,Bengaluru FC,True
+82,J. Maclaren,Australia,FWD,69,1200000,Mohun Bagan Super Giant,True
+83,G. Stensness,Australia,DEF,69,1800000,Viking FK,True
+84,K. Trewin,Australia,DEF,69,2600000,Melbourne City FC,True
+85,J. Bos,Australia,DEF,69,3000000,Feyenoord,True
+86,A. Caceres,Australia,MID,69,1100000,Macarthur FC,True
+87,A. Taggart,Australia,FWD,69,1100000,Perth Glory,False
+88,C. Metcalfe,Australia,MID,69,1900000,FC St. Pauli,False
+89,F. Karačić,Australia,DEF,68,1100000,Hajduk Split,False
+90,S. Ugarković,Australia,MID,68,1000000,Western Sydney Wanderers,False
+91,D. Alaba,Austria,DEF,82,14500000,Real Madrid,True
+92,K. Laimer,Austria,DEF,82,27500000,FC Bayern München,True
+93,X. Schlager,Austria,MID,80,23000000,RB Leipzig,True
+94,M. Sabitzer,Austria,MID,80,15000000,Borussia Dortmund,True
+95,K. Danso,Austria,DEF,79,20500000,Tottenham Hotspur,True
+96,P. Lienhart,Austria,DEF,79,16500000,SC Freiburg,True
+97,S. Posch,Austria,DEF,79,16000000,Como,True
+98,R. Schmid,Austria,MID,78,18500000,SV Werder Bremen,True
+99,N. Seiwald,Austria,MID,77,20000000,RB Leipzig,True
+100,M. Friedl,Austria,DEF,77,11000000,SV Werder Bremen,True
+101,C. Baumgartner,Austria,MID,77,14000000,RB Leipzig,True
+102,P. Wimmer,Austria,MID,77,16500000,VfL Wolfsburg,True
+103,K. Stöger,Austria,MID,76,6000000,Borussia Mönchengladbach,True
+104,V. Lazaro,Austria,MID,76,7500000,Torino,True
+105,P. Mwene,Austria,DEF,76,5500000,1. FSV Mainz 05,True
+106,C. Trimmel,Austria,DEF,75,1200000,1. FC Union Berlin,True
+107,M. Grüll,Austria,MID,75,6000000,SV Werder Bremen,True
+108,M. Cham,Austria,MID,75,9000000,SK Slavia Praha,True
+109,M. Wöber,Austria,DEF,75,5500000,SV Werder Bremen,True
+110,M. Gregoritsch,Austria,FWD,75,4800000,Brøndby IF,True
+111,D. Affengruber,Austria,DEF,75,11500000,Elche CF,True
+112,L. Querfeld,Austria,DEF,75,12000000,1. FC Union Berlin,True
+113,F. Grillitsch,Austria,MID,75,5500000,Sporting Clube de Braga,True
+114,G. Trauner,Austria,DEF,75,2700000,Feyenoord,True
+115,A. Prass,Austria,DEF,74,5500000,TSG 1899 Hoffenheim,True
+116,F. Kainz,Austria,MID,74,3300000,1. FC Köln,True
+117,M. Honsak,Austria,MID,74,4200000,1. FC Heidenheim 1846,False
+118,A. Dragović,Austria,DEF,74,1400000,FK Austria Wien,False
+119,S. Kalajdžić,Austria,FWD,74,4600000,LASK Linz,False
+120,D. Fitz,Austria,MID,74,5500000,Minnesota United FC,False
+121,T. Courtois,Belgium,GK,89,33500000,Real Madrid,True
+122,K. De Bruyne,Belgium,MID,87,36500000,Napoli,True
+123,Y. Tielemans,Belgium,MID,85,54000000,Aston Villa,True
+124,R. Lukaku,Belgium,FWD,84,34000000,Napoli,True
+125,L. Openda,Belgium,FWD,83,46000000,Juventus,True
+126,L. Trossard,Belgium,FWD,83,35000000,Arsenal,True
+127,M. Sels,Belgium,GK,83,12000000,Nottingham Forest,True
+128,K. Casteels,Belgium,GK,82,10000000,Al Qadsiah FC,True
+129,D. Lukébakio,Belgium,MID,82,32500000,SL Benfica,True
+130,C. De Ketelaere,Belgium,MID,82,43500000,Atalanta,True
+131,Y. Carrasco,Belgium,FWD,81,21500000,Al Shabab,True
+132,J. Doku,Belgium,FWD,80,32000000,Manchester City,True
+133,H. Vanaken,Belgium,MID,80,16500000,Club Brugge KV,True
+134,M. De Cuyper,Belgium,DEF,80,31000000,Brighton & Hove Albion,True
+135,A. Theate,Belgium,DEF,80,26500000,Eintracht Frankfurt,True
+136,A. Onana,Belgium,MID,79,23000000,Aston Villa,True
+137,A. Saelemaekers,Belgium,MID,79,20500000,AC Milan,True
+138,J. Bakayoko,Belgium,FWD,78,28500000,RB Leipzig,True
+139,B. Heynen,Belgium,MID,78,12500000,KRC Genk,True
+140,S. Lammens,Belgium,GK,78,27500000,Manchester United,True
+141,M. Fofana,Belgium,MID,78,31000000,Olympique Lyonnais,True
+142,R. Lavia,Belgium,MID,78,27000000,Chelsea,True
+143,Z. Debast,Belgium,MID,78,30000000,Sporting CP,True
+144,C. Vanhoutte,Belgium,MID,77,12500000,OGC Nice,True
+145,O. Mangala,Belgium,MID,77,11500000,Olympique Lyonnais,True
+146,A. Witsel,Belgium,DEF,77,1900000,Girona FC,True
+147,N. Raskin,Belgium,MID,77,14500000,Rangers FC,False
+148,H. Cuypers,Belgium,FWD,77,11000000,Chicago Fire,False
+149,M. Batshuayi,Belgium,FWD,77,9000000,Eintracht Frankfurt,False
+150,A. Castro-Montes,Belgium,MID,77,10500000,1. FC Köln,False
+151,E. Džeko,Bosnia and Herzegovina,FWD,81,9000000,Fiorentina,True
+152,E. Demirović,Bosnia and Herzegovina,FWD,80,23000000,VfB Stuttgart,True
+153,S. Kolašinac,Bosnia and Herzegovina,DEF,79,11500000,Atalanta,True
+154,E. Višća,Bosnia and Herzegovina,MID,78,6000000,Trabzonspor,True
+155,N. Vasilj,Bosnia and Herzegovina,GK,77,8000000,FC St. Pauli,True
+156,H. Hajradinović,Bosnia and Herzegovina,MID,76,6000000,Kasımpaşa SK,True
+157,M. Stevanović,Bosnia and Herzegovina,MID,75,2600000,Servette FC,True
+158,A. Dedić,Bosnia and Herzegovina,DEF,74,6000000,SL Benfica,True
+159,A. Ahmedhodžić,Bosnia and Herzegovina,DEF,74,5000000,Feyenoord,True
+160,A. Hadžiahmetović,Bosnia and Herzegovina,MID,73,2700000,Hull City,True
+161,H. Tabaković,Bosnia and Herzegovina,FWD,73,2600000,Borussia Mönchengladbach,True
+162,A. Gigović,Bosnia and Herzegovina,MID,72,4700000,BSC Young Boys,True
+163,A. Memić,Bosnia and Herzegovina,MID,72,3000000,Viktoria Plzeň,True
+164,A. Barišić,Bosnia and Herzegovina,DEF,72,3200000,FC Basel 1893,True
+165,D. Huseinbašić,Bosnia and Herzegovina,MID,72,3500000,1. FC Köln,True
+166,M. Đurić,Bosnia and Herzegovina,FWD,71,800000,Parma,True
+167,E. Sarić,Bosnia and Herzegovina,MID,71,875000,Qingdao Hainiu FC,True
+168,V. Kovacević,Bosnia and Herzegovina,GK,70,1600000,Norwich City,True
+169,Kodro,Bosnia and Herzegovina,FWD,70,1300000,Real Zaragoza,True
+170,A. Begović,Bosnia and Herzegovina,GK,70,180000,Leicester City,True
+171,D. Hadžikadunić,Bosnia and Herzegovina,DEF,70,1700000,Sampdoria,True
+172,T. Muharemović,Bosnia and Herzegovina,DEF,70,3300000,Sassuolo,True
+173,A. Hasić,Bosnia and Herzegovina,MID,70,2200000,Cracovia,True
+174,J. Gazibegović,Bosnia and Herzegovina,DEF,70,2100000,1. FC Köln,True
+175,L. Kulenović,Bosnia and Herzegovina,FWD,69,2000000,Heracles Almelo,True
+176,N. Katić,Bosnia and Herzegovina,DEF,69,1400000,FC Schalke 04,True
+177,S. Baždar,Bosnia and Herzegovina,FWD,69,3200000,Real Zaragoza,False
+178,D. Burnić,Bosnia and Herzegovina,MID,68,1300000,Karlsruher SC,False
+179,R. Kapić,Bosnia and Herzegovina,MID,68,1200000,Lechia Gdańsk,False
+180,D. Varešanović,Bosnia and Herzegovina,MID,67,2000000,Gençlerbirliği SK,False
+181,Alisson,Brazil,GK,89,51000000,Liverpool,True
+182,Raphinha,Brazil,MID,89,104000000,FC Barcelona,True
+183,Vini Jr.,Brazil,FWD,89,141000000,Real Madrid,True
+184,Gabriel,Brazil,DEF,88,84000000,Arsenal,True
+185,Marquinhos,Brazil,DEF,87,54500000,Paris Saint-Germain,True
+186,Bruno Guimarães,Brazil,MID,86,77500000,Newcastle United,True
+187,Ederson,Brazil,GK,85,28500000,Fenerbahçe SK,True
+188,Bremer,Brazil,DEF,85,51000000,Juventus,True
+189,Rodrygo,Brazil,FWD,85,81500000,Real Madrid,True
+190,Éder Militão,Brazil,DEF,84,48000000,Real Madrid,True
+191,Matheus Cunha,Brazil,MID,83,45000000,Manchester United,True
+192,Ronaldo Cabrais,Brazil,MID,83,35500000,Botafogo,True
+193,Murillo,Brazil,DEF,83,47500000,Nottingham Forest,True
+194,Joelinton,Brazil,MID,82,30500000,Newcastle United,True
+195,Lucas Mantela,Brazil,GK,82,24500000,Palmeiras,True
+196,Ibañez,Brazil,DEF,82,33500000,Al Ahli SFC,True
+197,Éderson,Brazil,MID,82,40000000,Atalanta,True
+198,Malcom,Brazil,MID,82,30500000,Al Hilal,True
+199,Savinho,Brazil,FWD,82,47000000,Manchester City,True
+200,Fabinho,Brazil,MID,82,21500000,Al Ittihad,True
+201,Carlos Augusto,Brazil,DEF,81,27500000,Inter,True
+202,Nailton Suzuki,Brazil,MID,81,25500000,Atlético Mineiro,True
+203,Galeno,Brazil,MID,81,27500000,Al Ahli SFC,True
+204,Antony,Brazil,FWD,81,34000000,Real Betis Balompié,True
+205,Welington Dano,Brazil,DEF,81,26000000,Atlético Mineiro,True
+206,Gabriel Martinelli,Brazil,FWD,81,35000000,Arsenal,True
+207,Lucas Perri,Brazil,GK,81,27000000,Leeds United,False
+208,David Neres,Brazil,FWD,81,26000000,Napoli,False
+209,Oswaldinato,Brazil,FWD,81,25500000,Flamengo,False
+210,Anderson Talisca,Brazil,MID,81,21500000,Fenerbahçe SK,False
+211,L. Costa,Cabo Verde,DEF,77,19500000,Villarreal CF,True
+212,Bruno Varela,Cabo Verde,GK,74,3200000,Al Hazem FC,True
+213,Nuno da Costa,Cabo Verde,FWD,74,2100000,Medipol Başakşehir FK,True
+214,Leandro Andrade,Cabo Verde,FWD,72,2900000,Qarabağ FK,True
+215,Wagner Pina,Cabo Verde,MID,72,5500000,Trabzonspor,True
+216,S. Moreira,Cabo Verde,DEF,72,1900000,Columbus Crew,True
+217,Telmo Arcanjo,Cabo Verde,MID,71,2800000,Vitória SC,True
+218,Jovane Cabral,Cabo Verde,FWD,70,1700000,Estrela da Amadora,True
+219,Dailon Livramento,Cabo Verde,FWD,70,2400000,Casa Pia,True
+220,Jamiro Monteiro,Cabo Verde,MID,69,1200000,PEC Zwolle,True
+221,Duk,Cabo Verde,MID,68,1600000,CD Leganés,True
+222,Sidnei Tavares,Cabo Verde,MID,68,2500000,Blackburn Rovers,True
+223,Ricardo Santos,Cabo Verde,DEF,67,825000,Swansea City,True
+224,Fabrício Garcia,Cabo Verde,MID,67,1600000,GD Estoril Praia,True
+225,Vasco Lopes,Cabo Verde,MID,67,1200000,Radomiak Radom,True
+226,Ivanildo Fernandes,Cabo Verde,DEF,66,725000,CD Nacional,True
+227,Sidny Cabral,Cabo Verde,DEF,66,1800000,Estrela da Amadora,True
+228,R. Lopes,Cabo Verde,DEF,66,400000,Shamrock Rovers,True
+229,Bryan Teixeira,Cabo Verde,FWD,66,1300000,LASK Linz,True
+230,Bruno Leite,Cabo Verde,MID,65,675000,FK Haugesund,True
+231,Hélder Tavares,Cabo Verde,MID,65,200000,CD Tondela,True
+232,Diogo Mendes,Cabo Verde,MID,64,625000,Rapid Bucuresti,True
+233,João Paulo,Cabo Verde,MID,64,675000,Oțelul Galați,True
+234,Steve Furtado,Cabo Verde,DEF,63,425000,FCV Farul Constanța,True
+235,Patrick,Cabo Verde,FWD,63,400000,Oțelul Galați,True
+236,Djé Tavares,Cabo Verde,MID,60,550000,Santa Clara,True
+237,Stéphane Cueni,Cabo Verde,MID,60,350000,FC Winterthur,False
+238,Bruno Carvalho,Cabo Verde,MID,59,230000,Metaloglobus București,False
+239,Ely Fernandes,Cabo Verde,MID,59,110000,Metaloglobus București,False
+240,A. Davies,Canada,DEF,84,53500000,FC Bayern München,True
+241,J. David,Canada,FWD,82,41000000,Juventus,True
+242,M. Borjan,Canada,GK,78,1600000,Al Riyadh,True
+243,A. Johnston,Canada,DEF,78,17000000,Celtic,True
+244,Stephen Eustáquio,Canada,MID,77,10000000,FC Porto,True
+245,C. Larin,Canada,FWD,77,10500000,Feyenoord,True
+246,M. Bombito,Canada,DEF,76,13500000,OGC Nice,True
+247,P. David,Canada,FWD,75,8500000,Union Saint-Gilloise,True
+248,T. Buchanan,Canada,MID,74,5000000,Villarreal CF,True
+249,D. Cornelius,Canada,DEF,74,4500000,Rangers FC,True
+250,D. St. Clair,Canada,GK,73,2800000,Minnesota United FC,True
+251,I. Koné,Canada,MID,72,4700000,Sassuolo,True
+252,L. Millar,Canada,MID,72,3100000,Hull City,True
+253,R. Laryea,Canada,MID,72,2300000,Toronto FC,True
+254,K. Miller,Canada,DEF,71,1600000,Portland Timbers,True
+255,T. Bair,Canada,FWD,71,2500000,FC Lausanne-Sport,True
+256,J. Osorio,Canada,MID,71,1200000,Toronto FC,True
+257,T. Oluwaseyi,Canada,FWD,70,2200000,Villarreal CF,True
+258,N. Sigur,Canada,DEF,70,3400000,Hajduk Split,True
+259,J. Hoilett,Canada,MID,69,575000,Hibernian,True
+260,M. Crépeau,Canada,GK,69,750000,Portland Timbers,True
+261,S. Piette,Canada,MID,69,1200000,CF Montréal,True
+262,I. Ugbo,Canada,FWD,69,1700000,Sheffield Wednesday,True
+263,S. Arfield,Canada,MID,68,375000,Falkirk,True
+264,T. Corbeanu,Canada,MID,68,1900000,Toronto FC,True
+265,J. Waterman,Canada,DEF,68,1000000,Chicago Fire,True
+266,A. Ahmed,Canada,MID,68,1900000,Vancouver Whitecaps FC,False
+267,N. Saliba,Canada,MID,68,2700000,RSC Anderlecht,False
+268,S. Adekugbe,Canada,DEF,68,1000000,Vancouver Whitecaps FC,False
+269,J. Nelson,Canada,FWD,68,2500000,Vancouver Whitecaps FC,False
+270,L. Díaz,Colombia,MID,85,54500000,FC Bayern München,True
+271,D. Sánchez,Colombia,DEF,82,25500000,Galatasaray SK,True
+272,D. Zapata,Colombia,FWD,82,15000000,Torino,True
+273,D. Muñoz,Colombia,DEF,81,22500000,Crystal Palace,True
+274,J. Durán,Colombia,FWD,79,36000000,Fenerbahçe SK,True
+275,R. Ríos,Colombia,MID,79,24500000,SL Benfica,True
+276,Cucho,Colombia,FWD,78,18500000,Real Betis Balompié,True
+277,J. Mojica,Colombia,DEF,78,9500000,RCD Mallorca,True
+278,J. Arias,Colombia,FWD,78,15000000,Wolverhampton Wanderers,True
+279,C. Arango,Colombia,FWD,78,14000000,San Jose Earthquakes,True
+280,K. Castaño,Colombia,MID,77,14500000,River Plate,True
+281,J. Quintero,Colombia,MID,77,8500000,River Plate,True
+282,J. Lerma,Colombia,MID,77,9000000,Crystal Palace,True
+283,Y. Mina,Colombia,DEF,77,8500000,Cagliari,True
+284,L. Suárez,Colombia,FWD,77,12500000,Sporting CP,True
+285,J. Lucumí,Colombia,DEF,76,8000000,Bologna,True
+286,J. Cuadrado,Colombia,MID,76,2400000,Pisa,True
+287,D. Ospina,Colombia,GK,76,825000,Atlético Nacional,True
+288,L. Muriel,Colombia,FWD,76,3600000,Orlando City SC,True
+289,M. Borja,Colombia,FWD,76,6000000,River Plate,True
+290,J. Campaz,Colombia,MID,76,10000000,Rosario Central,True
+291,D. Machado,Colombia,DEF,76,5500000,RC Lens,True
+292,M. Uribe,Colombia,MID,76,3500000,Atlético Nacional,True
+293,S. Villa,Colombia,FWD,75,5500000,Independiente Rivadavia,True
+294,N. Deossa,Colombia,MID,75,8000000,Real Betis Balompié,True
+295,D. Moreno,Colombia,FWD,75,1900000,Once Caldas,True
+296,Y. Asprilla,Colombia,MID,75,11500000,Girona FC,False
+297,Y. Gómez Andrade,Colombia,DEF,75,2700000,Seattle Sounders FC,False
+298,Á. Montero,Colombia,GK,75,4200000,Vélez Sarsfield,False
+299,A. Morelos,Colombia,FWD,75,5500000,Atlético Nacional,False
+300,J. Gvardiol,Croatia,DEF,84,53500000,Manchester City,True
+301,M. Kovačić,Croatia,MID,83,30000000,Manchester City,True
+302,L. Modrić,Croatia,MID,83,11500000,AC Milan,True
+303,A. Budimir,Croatia,FWD,82,19500000,CA Osasuna,True
+304,M. Brozović,Croatia,MID,81,17000000,Al Nassr,True
+305,A. Kramarić,Croatia,MID,81,12000000,TSG 1899 Hoffenheim,True
+306,I. Perišić,Croatia,FWD,81,8500000,PSV,True
+307,M. Pašalić,Croatia,MID,80,20000000,Atalanta,True
+308,D. Livaković,Croatia,GK,80,14000000,Girona FC,True
+309,M. Livaja,Croatia,FWD,79,15000000,Hajduk Split,True
+310,N. Vlašić,Croatia,MID,79,18500000,Torino,True
+311,M. Baturina,Croatia,MID,78,21500000,Como,True
+312,J. Stanišić,Croatia,DEF,78,17500000,FC Bayern München,True
+313,L. Majer,Croatia,MID,78,16000000,VfL Wolfsburg,True
+314,L. Sučić,Croatia,MID,78,31500000,Real Sociedad,True
+315,J. Šutalo,Croatia,DEF,78,17500000,Ajax,True
+316,D. Kotarski,Croatia,GK,77,11500000,FC København,True
+317,K. Jakić,Croatia,MID,76,6500000,FC Augsburg,True
+318,B. Petković,Croatia,FWD,76,7500000,Kocaelispor,True
+319,P. Musa,Croatia,FWD,76,9000000,FC Dallas,True
+320,J. Juranović,Croatia,DEF,75,4900000,1. FC Union Berlin,True
+321,F. Ivanović,Croatia,FWD,75,12500000,SL Benfica,True
+322,N. Moro,Croatia,MID,75,6000000,Bologna,True
+323,J. Brekalo,Croatia,MID,75,6000000,Real Oviedo,True
+324,K. Kahlina,Croatia,GK,75,2800000,Charlotte FC,True
+325,T. Fruk,Croatia,MID,75,0,nan,True
+326,D. Ćaleta-Car,Croatia,DEF,74,3600000,Real Sociedad,False
+327,T. Jedvaj,Croatia,DEF,74,3900000,Panathinaikos FC,False
+328,M. Pongračić,Croatia,DEF,74,4500000,Fiorentina,False
+329,P. Sučić,Croatia,MID,74,9500000,Inter,False
+330,T. Chong,Curaçao,MID,71,2800000,Sheffield United,True
+331,D. Chirino,Curaçao,DEF,69,2900000,UD Almería,True
+332,J. Bacuna,Curaçao,MID,69,1400000,Gaziantep FK,True
+333,S. Sambo,Curaçao,DEF,68,2300000,Sparta Rotterdam,True
+334,B. Kuwas,Curaçao,MID,67,800000,FC Volendam,True
+335,X. Severina,Curaçao,FWD,67,1600000,Casa Pia,True
+336,T. Noslin,Curaçao,MID,66,1700000,Telstar,True
+337,S. Floranus,Curaçao,DEF,66,925000,PEC Zwolle,True
+338,A. Martha,Curaçao,DEF,64,1300000,Rotherham United,True
+339,T. Mercera,Curaçao,DEF,64,1300000,FC Groningen,True
+340,L. Comenencia,Curaçao,DEF,62,950000,FC Zürich,True
+341,R. Rosario,Curaçao,MID,60,600000,Excelsior,True
+342,T. Bodak,Curaçao,GK,60,475000,Telstar,True
+343,I. Ahmed,Curaçao,MID,58,500000,SC Heerenveen,True
+344,G. Sambo,Curaçao,FWD,57,425000,Heracles Almelo,True
+345,P. Schick,Czech Republic,FWD,85,54000000,Bayer 04 Leverkusen,True
+346,L. Krejčí,Czech Republic,DEF,78,17500000,Wolverhampton Wanderers,True
+347,T. Souček,Czech Republic,MID,78,12000000,West Ham United,True
+348,L. Provod,Czech Republic,MID,78,14000000,SK Slavia Praha,True
+349,A. Hložek,Czech Republic,FWD,77,17000000,TSG 1899 Hoffenheim,True
+350,V. Černý,Czech Republic,MID,77,11000000,Beşiktaş JK,True
+351,P. Šulc,Czech Republic,MID,77,14500000,Olympique Lyonnais,True
+352,J. Staněk,Czech Republic,GK,76,5000000,SK Slavia Praha,True
+353,T. Holeš,Czech Republic,DEF,76,4900000,SK Slavia Praha,True
+354,M. Sadílek,Czech Republic,MID,76,8500000,SK Slavia Praha,True
+355,P. Bucha,Czech Republic,MID,75,6500000,FC Cincinnati,True
+356,M. Kovář,Czech Republic,GK,75,6500000,PSV,True
+357,M. Jedlička,Czech Republic,GK,75,4800000,Viktoria Plzeň,True
+358,A. Barák,Czech Republic,MID,75,5500000,Sampdoria,True
+359,T. Chorý,Czech Republic,FWD,75,5500000,SK Slavia Praha,True
+360,A. Kinský,Czech Republic,GK,75,7500000,Tottenham Hotspur,True
+361,P. Ševčík,Czech Republic,MID,74,3500000,SK Slavia Praha,True
+362,J. Pavlenka,Czech Republic,GK,74,1400000,PAOK,True
+363,P. Kadeřábek,Czech Republic,DEF,74,2200000,Sparta Praha,True
+364,M. Vitík,Czech Republic,DEF,74,6000000,Bologna,True
+365,V. Kušej,Czech Republic,FWD,74,5500000,SK Slavia Praha,True
+366,J. Bořil,Czech Republic,DEF,74,1400000,SK Slavia Praha,True
+367,M. Šín,Czech Republic,MID,74,9500000,AZ Alkmaar,True
+368,L. Červ,Czech Republic,MID,74,5500000,Viktoria Plzeň,True
+369,D. Douděra,Czech Republic,MID,74,4500000,SK Slavia Praha,True
+370,M. Chytil,Czech Republic,FWD,74,5500000,SK Slavia Praha,True
+371,D. Zima,Czech Republic,DEF,74,5000000,SK Slavia Praha,False
+372,F. Panák,Czech Republic,DEF,74,3500000,Sparta Praha,False
+373,M. Vydra,Czech Republic,FWD,74,2700000,Viktoria Plzeň,False
+374,V. Jemelka,Czech Republic,DEF,74,3500000,Viktoria Plzeň,False
+375,E. Ndicka,Côte d'Ivoire,DEF,81,28500000,Roma,True
+376,F. Kessié,Côte d'Ivoire,MID,80,20500000,Al Ahli SFC,True
+377,W. Singo,Côte d'Ivoire,DEF,80,29000000,Galatasaray SK,True
+378,O. Kossounou,Côte d'Ivoire,DEF,80,29000000,Atalanta,True
+379,O. Diomande,Côte d'Ivoire,DEF,80,40000000,Sporting CP,True
+380,N. Pépé,Côte d'Ivoire,MID,80,20500000,Villarreal CF,True
+381,E. Guessand,Côte d'Ivoire,MID,79,26500000,Aston Villa,True
+382,E. Agbadou,Côte d'Ivoire,DEF,79,17500000,Wolverhampton Wanderers,True
+383,Amad,Côte d'Ivoire,MID,79,28000000,Manchester United,True
+384,H. Traoré,Côte d'Ivoire,MID,77,14000000,Olympique de Marseille,True
+385,W. Zaha,Côte d'Ivoire,FWD,77,8500000,Charlotte FC,True
+386,G. Doué,Côte d'Ivoire,DEF,77,15000000,RC Strasbourg Alsace,True
+387,I. Sangaré,Côte d'Ivoire,MID,77,11500000,Nottingham Forest,True
+388,J. Bamba,Côte d'Ivoire,MID,77,10500000,Chicago Fire,True
+389,S. Fofana,Côte d'Ivoire,MID,77,10000000,Stade Rennais FC,True
+390,S. Haller,Côte d'Ivoire,FWD,77,9000000,FC Utrecht,True
+391,J. Boga,Côte d'Ivoire,FWD,76,7500000,OGC Nice,True
+392,Y. Fofana,Côte d'Ivoire,GK,76,9000000,Çaykur Rizespor,True
+393,S. Adingra,Côte d'Ivoire,MID,76,15000000,Sunderland,True
+394,A. Lafont,Côte d'Ivoire,GK,75,5500000,Panathinaikos FC,True
+395,B. Traoré,Côte d'Ivoire,MID,75,12500000,FC Basel 1893,True
+396,M. Cornet,Côte d'Ivoire,MID,74,4200000,Genoa,True
+397,C. Kouamé,Côte d'Ivoire,FWD,74,4600000,Fiorentina,True
+398,M. Diomande,Côte d'Ivoire,MID,74,9000000,Rangers FC,True
+399,C. Operi,Côte d'Ivoire,DEF,74,3800000,Medipol Başakşehir FK,True
+400,C. Kipré,Côte d'Ivoire,DEF,74,4200000,Ipswich Town,True
+401,E. Bailly,Côte d'Ivoire,DEF,74,2900000,Real Oviedo,False
+402,C. Akpa,Côte d'Ivoire,DEF,74,6000000,AJ Auxerre,False
+403,J. Krasso,Côte d'Ivoire,FWD,74,4600000,Paris FC,False
+404,E. Latte Lath,Côte d'Ivoire,FWD,73,4000000,Atlanta United,False
+405,Y. Wissa,DR Congo,FWD,82,31000000,Newcastle United,True
+406,S. Banza,DR Congo,FWD,81,26500000,Sporting Clube de Braga,True
+407,A. Wan-Bissaka,DR Congo,DEF,80,22000000,West Ham United,True
+408,C. Bakambu,DR Congo,FWD,77,5000000,Real Betis Balompié,True
+409,A. Masuaku,DR Congo,DEF,75,4099999,Sunderland,True
+410,C. Mbemba,DR Congo,DEF,75,4600000,Lille OSC,True
+411,S. Essende,DR Congo,FWD,74,4600000,FC Augsburg,True
+412,N. Sadiki,DR Congo,MID,74,9000000,Sunderland,True
+413,J. Kayembe,DR Congo,DEF,74,3600000,KRC Genk,True
+414,N. Mukau,DR Congo,MID,74,8500000,Lille OSC,True
+415,Silas,DR Congo,MID,74,5000000,VfB Stuttgart,True
+416,A. Tuanzebe,DR Congo,DEF,73,3200000,Burnley,True
+417,A. Pululu,DR Congo,FWD,72,2900000,Jagiellonia Białystok,True
+418,B. Baningime,DR Congo,MID,71,2200000,Hearts,True
+419,D. Batubinsika,DR Congo,DEF,71,1700000,AS Saint-Étienne,True
+420,S. Kapuadi,DR Congo,DEF,71,1700000,Legia Warszawa,True
+421,C. Pickel,DR Congo,MID,71,1900000,RCD Espanyol,True
+422,E. Kayembe,DR Congo,MID,71,2100000,Watford,True
+423,N. Mbuku,DR Congo,MID,70,2500000,Montpellier HSC,True
+424,G. Diangana,DR Congo,MID,70,1700000,Elche CF,True
+425,M. Tisserand,DR Congo,DEF,70,1000000,Sydney FC,True
+426,J. Muleka,DR Congo,FWD,70,2100000,Konyaspor,True
+427,O. Maritu,DR Congo,FWD,70,2100000,Yunnan Yukun,True
+428,M. Elia,DR Congo,FWD,70,1700000,Alanyaspor,True
+429,J. Ngakia,DR Congo,DEF,69,1900000,Watford,True
+430,W. Balikwisha,DR Congo,MID,68,1600000,Oud-Heverlee Leuven,True
+431,P. Mpanzu,DR Congo,MID,68,1000000,Cambridge United,False
+432,R. Bushiri,DR Congo,DEF,68,1400000,Hibernian,False
+433,F. N'Sakala,DR Congo,DEF,67,375000,FC Annecy,False
+434,L. Mpasi,DR Congo,GK,67,675000,Le Havre AC,False
+435,M. Caicedo,Ecuador,MID,87,93000000,Chelsea,True
+436,W. Pacho,Ecuador,DEF,86,83000000,Paris Saint-Germain,True
+437,P. Hincapié,Ecuador,DEF,83,52000000,Arsenal,True
+438,P. Estupiñán,Ecuador,DEF,79,18500000,AC Milan,True
+439,Á. Preciado,Ecuador,MID,75,6000000,Sparta Praha,True
+440,J. Ordoñez,Ecuador,DEF,75,12000000,Club Brugge KV,True
+441,H. Galíndez,Ecuador,GK,74,475000,Huracán,True
+442,A. Domínguez,Ecuador,GK,73,350000,LDU Quito,True
+443,K. Páez,Ecuador,MID,73,7000000,RC Strasbourg Alsace,True
+444,J. Burrai,Ecuador,GK,72,400000,Talleres,True
+445,L. Campana,Ecuador,FWD,72,3500000,New England Revolution,True
+446,C. Gruezo,Ecuador,MID,72,2000000,LDU Quito,True
+447,J. Cifuentes,Ecuador,MID,72,3000000,Toronto FC,True
+448,J. Chávez,Ecuador,DEF,72,3500000,RC Lens,True
+449,J. Sornoza,Ecuador,MID,72,1900000,Independiente del Valle,True
+450,F. Gaibor,Ecuador,MID,71,1200000,Alianza Lima,True
+451,L. Quiñonez,Ecuador,DEF,71,1400000,LDU Quito,True
+452,J. Ortiz,Ecuador,MID,71,1600000,Portland Timbers,True
+453,B. Ramírez,Ecuador,MID,71,2600000,LDU Quito,True
+454,J. Corozo,Ecuador,MID,71,1800000,Barcelona de Guayaquil,True
+455,B. Palacios,Ecuador,FWD,71,1800000,Universidad Católica del Ecuador,True
+456,J. Sarmiento,Ecuador,MID,70,3500000,Cremonese,True
+457,A. Minda,Ecuador,MID,70,3600000,Cercle Brugge KSV,True
+458,J. Mercado,Ecuador,FWD,70,3500000,Sparta Praha,True
+459,J. Carabalí,Ecuador,DEF,70,1400000,Universitario de Deportes,True
+460,E. Castillo,Ecuador,MID,70,1500000,Alianza Lima,True
+461,P. Mercado,Ecuador,MID,70,3600000,Independiente del Valle,False
+462,C. Garcés,Ecuador,FWD,70,675000,Cienciano,False
+463,L. Cangá,Ecuador,DEF,70,1300000,Universidad Católica del Ecuador,False
+464,A. Alvarado,Ecuador,MID,70,1700000,LDU Quito,False
+465,M. Salah,Egypt,MID,91,82000000,Liverpool,True
+466,O. Marmoush,Egypt,FWD,84,50500000,Manchester City,True
+467,A. Hegazi,Egypt,DEF,75,1800000,NEOM SC,True
+468,M. Abdelmonem,Egypt,DEF,74,5500000,OGC Nice,True
+469,M. Mohamed,Egypt,FWD,73,3300000,FC Nantes,True
+470,A. Hassan,Egypt,FWD,72,1900000,Al Ettifaq,True
+471,R. Rabia,Egypt,DEF,67,650000,Al Ain,True
+472,O. Fayed,Egypt,DEF,65,1500000,FC Arouca,True
+473,K. Ashraf,Egypt,FWD,53,210000,Al Akhdoud Saudi Club,True
+474,S. Sharples-Ahmed,Egypt,MID,52,210000,Bolton Wanderers,True
+475,J. Bellingham,England,MID,90,174500000,Real Madrid,True
+476,H. Kane,England,FWD,89,87000000,FC Bayern München,True
+477,B. Saka,England,FWD,88,118500000,Arsenal,True
+478,D. Rice,England,MID,87,83500000,Arsenal,True
+479,C. Palmer,England,MID,87,109000000,Chelsea,True
+480,T. Alexander-Arnold,England,DEF,86,73000000,Real Madrid,True
+481,P. Foden,England,FWD,85,71500000,Manchester City,True
+482,J. Pickford,England,GK,84,22500000,Everton,True
+483,J. Maddison,England,MID,84,42000000,Tottenham Hotspur,True
+484,O. Watkins,England,FWD,84,42000000,Aston Villa,True
+485,A. Gordon,England,FWD,83,49500000,Newcastle United,True
+486,J. Bowen,England,MID,83,36500000,West Ham United,True
+487,B. White,England,DEF,83,35000000,Arsenal,True
+488,E. Eze,England,MID,83,42000000,Arsenal,True
+489,E. Konsa,England,DEF,82,30500000,Aston Villa,True
+490,J. Stones,England,DEF,82,21000000,Manchester City,True
+491,M. Rogers,England,MID,82,44500000,Aston Villa,True
+492,M. Gibbs-White,England,MID,82,38000000,Nottingham Forest,True
+493,M. Greenwood,England,MID,82,43500000,Olympique de Marseille,True
+494,M. Guéhi,England,DEF,82,35000000,Crystal Palace,True
+495,C. Gallagher,England,MID,81,35500000,Atlético Madrid,True
+496,R. James,England,DEF,81,31500000,Chelsea,True
+497,N. Pope,England,GK,81,8500000,Newcastle United,True
+498,F. Tomori,England,DEF,81,29500000,AC Milan,True
+499,D. Henderson,England,GK,81,20500000,Crystal Palace,True
+500,J. Murphy,England,FWD,81,25000000,Newcastle United,True
+501,I. Toney,England,FWD,81,25500000,Al Ahli SFC,False
+502,C. Smalling,England,DEF,80,5500000,Al Fayha,False
+503,C. Jones,England,MID,80,29000000,Liverpool,False
+504,D. Solanke,England,FWD,80,23000000,Tottenham Hotspur,False
+505,K. Mbappé,France,FWD,91,173500000,Real Madrid,True
+506,O. Dembélé,France,FWD,90,122500000,Paris Saint-Germain,True
+507,W. Saliba,France,DEF,87,92000000,Arsenal,True
+508,M. Maignan,France,GK,87,61000000,AC Milan,True
+509,J. Koundé,France,DEF,87,85500000,FC Barcelona,True
+510,M. Olise,France,MID,86,88000000,FC Bayern München,True
+511,I. Konaté,France,DEF,86,70000000,Liverpool,True
+512,M. Thuram,France,FWD,85,58500000,Inter,True
+513,D. Doué,France,FWD,85,83500000,Paris Saint-Germain,True
+514,A. Griezmann,France,FWD,85,26000000,Atlético Madrid,True
+515,K. Benzema,France,FWD,85,18500000,Al Ittihad,True
+516,D. Upamecano,France,DEF,85,62500000,FC Bayern München,True
+517,N. Kanté,France,MID,85,18500000,Al Ittihad,True
+518,B. Barcola,France,FWD,84,61500000,Paris Saint-Germain,True
+519,M. Diaby,France,MID,84,50500000,Al Ittihad,True
+520,B. Pavard,France,DEF,84,35500000,Olympique de Marseille,True
+521,A. Tchouaméni,France,MID,84,50500000,Real Madrid,True
+522,T. Hernández,France,DEF,84,44500000,Al Hilal,True
+523,E. Camavinga,France,MID,83,73500000,Real Madrid,True
+524,A. Rabiot,France,MID,83,35000000,AC Milan,True
+525,L. Chevalier,France,GK,83,44000000,Paris Saint-Germain,True
+526,H. Ekitiké,France,FWD,83,55500000,Liverpool,True
+527,K. Coman,France,MID,83,35500000,Al Nassr,True
+528,B. Kamara,France,MID,83,41000000,Aston Villa,True
+529,J. Mateta,France,FWD,82,31000000,Crystal Palace,True
+530,M. Guendouzi,France,MID,82,36000000,Lazio,True
+531,C. Tolisso,France,MID,81,24500000,Olympique Lyonnais,False
+532,Y. Fofana,France,MID,81,30500000,AC Milan,False
+533,M. Simakan,France,DEF,81,34000000,Al Nassr,False
+534,C. Nkunku,France,MID,81,27500000,AC Milan,False
+535,F. Wirtz,Germany,MID,89,150500000,Liverpool,True
+536,J. Kimmich,Germany,MID,89,86000000,FC Bayern München,True
+537,J. Musiala,Germany,MID,88,133500000,FC Bayern München,True
+538,J. Tah,Germany,DEF,87,66500000,FC Bayern München,True
+539,A. Rüdiger,Germany,DEF,86,44000000,Real Madrid,True
+540,M. ter Stegen,Germany,GK,86,22000000,FC Barcelona,True
+541,N. Schlotterbeck,Germany,DEF,85,63500000,Borussia Dortmund,True
+542,M. Neuer,Germany,GK,84,4700000,FC Bayern München,True
+543,J. Brandt,Germany,MID,83,35500000,Borussia Dortmund,True
+544,A. Stiller,Germany,MID,83,47500000,VfB Stuttgart,True
+545,O. Baumann,Germany,GK,83,4000000,TSG 1899 Hoffenheim,True
+546,İ. Gündoğan,Germany,MID,83,16500000,Galatasaray SK,True
+547,E. Can,Germany,DEF,82,21000000,Borussia Dortmund,True
+548,J. Burkardt,Germany,FWD,82,42000000,Eintracht Frankfurt,True
+549,S. Gnabry,Germany,MID,82,30000000,FC Bayern München,True
+550,D. Raum,Germany,DEF,82,32000000,RB Leipzig,True
+551,W. Anton,Germany,DEF,82,26500000,Borussia Dortmund,True
+552,K. Havertz,Germany,FWD,82,38000000,Arsenal,True
+553,M. Mittelstädt,Germany,DEF,82,27500000,VfB Stuttgart,True
+554,M. Götze,Germany,MID,82,18500000,Eintracht Frankfurt,True
+555,M. Ginter,Germany,DEF,82,21000000,SC Freiburg,True
+556,L. Sané,Germany,MID,82,30000000,Galatasaray SK,True
+557,R. Koch,Germany,DEF,82,26500000,Eintracht Frankfurt,True
+558,L. Goretzka,Germany,MID,82,29000000,FC Bayern München,True
+559,F. Nmecha,Germany,MID,82,40000000,Borussia Dortmund,True
+560,K. Adeyemi,Germany,MID,81,39000000,Borussia Dortmund,True
+561,K. Trapp,Germany,GK,81,4400000,Paris FC,False
+562,R. Andrich,Germany,MID,81,21500000,Bayer 04 Leverkusen,False
+563,T. Kleindienst,Germany,FWD,81,25500000,Borussia Mönchengladbach,False
+564,N. Amiri,Germany,MID,81,25500000,1. FSV Mainz 05,False
+565,T. Partey,Ghana,MID,83,24000000,Villarreal CF,True
+566,Iñaki Williams,Ghana,MID,83,30000000,Athletic Club,True
+567,M. Kudus,Ghana,FWD,80,29000000,Tottenham Hotspur,True
+568,A. Semenyo,Ghana,MID,80,26500000,AFC Bournemouth,True
+569,A. Mumin,Ghana,DEF,77,12000000,Rayo Vallecano,True
+570,A. Djiku,Ghana,DEF,77,0,nan,True
+571,M. Salisu,Ghana,DEF,76,10000000,AS Monaco,True
+572,A. Fatawu,Ghana,MID,76,15000000,Leicester City,True
+573,R. Baba,Ghana,DEF,76,6500000,PAOK,True
+574,J. Paintsil,Ghana,MID,76,8000000,LA Galaxy,True
+575,E. Nuamah,Ghana,MID,75,11500000,Olympique Lyonnais,True
+576,J. Aidoo,Ghana,DEF,75,5000000,RC Celta,True
+577,G. Mensah,Ghana,DEF,74,4500000,AJ Auxerre,True
+578,E. Gyasi,Ghana,MID,74,3500000,Palermo FC,True
+579,A. Seidu,Ghana,DEF,74,6000000,Stade Rennais FC,True
+580,E. Owusu,Ghana,MID,73,3500000,AJ Auxerre,True
+581,J. Ayew,Ghana,MID,73,1900000,Leicester City,True
+582,L. Zigi,Ghana,GK,73,2600000,FC St.Gallen 1879,True
+583,C. Bonsu Baah,Ghana,MID,73,6500000,Al Qadsiah FC,True
+584,S. Abdul Samed,Ghana,MID,73,3400000,OGC Nice,True
+585,J. Schlupp,Ghana,DEF,73,2100000,Norwich City,True
+586,T. Lamptey,Ghana,DEF,73,3800000,Fiorentina,True
+587,E. Boateng,Ghana,FWD,72,2300000,Gaziantep FK,True
+588,A. Ayew,Ghana,FWD,72,0,nan,True
+589,O. Bukari,Ghana,FWD,72,2800000,Austin FC,True
+590,A. Duncan,Ghana,MID,72,1800000,Venezia,True
+591,J. Opoku,Ghana,DEF,72,3100000,Medipol Başakşehir FK,False
+592,I. Sadiq,Ghana,MID,72,3100000,AZ Alkmaar,False
+593,I. Osman,Ghana,MID,72,5500000,AJ Auxerre,False
+594,I. Baba,Ghana,MID,71,1600000,UD Almería,False
+595,J. Bellegarde,Haiti,MID,75,6500000,Wolverhampton Wanderers,True
+596,F. Pierrot,Haiti,FWD,72,2300000,AEK Athens,True
+597,R. Adé,Haiti,DEF,72,625000,LDU Quito,True
+598,J. Duverne,Haiti,DEF,71,1800000,KAA Gent,True
+599,C. Arcus,Haiti,DEF,71,1600000,Angers SCO,True
+600,D. Jean Jacques,Haiti,MID,70,2300000,Philadelphia Union,True
+601,J. Placide,Haiti,GK,69,150000,Sporting Club Bastia,True
+602,Fafà Picault,Haiti,FWD,69,650000,Inter Miami,True
+603,D. Etienne Jr.,Haiti,MID,66,850000,Toronto FC,True
+604,D. Louicius,Haiti,FWD,65,1100000,FC Dallas,True
+605,M. Expérience,Haiti,DEF,62,475000,AS Nancy Lorraine,True
+606,A. Guboglo,Haiti,MID,59,575000,CF Montréal,True
+607,B. Joseph,Haiti,MID,56,350000,FC Sion,True
+608,W. Paugain,Haiti,DEF,55,160000,SV Zulte Waregem,True
+609,M. Taremi,Iran,FWD,78,11500000,Olympiacos FC,True
+610,A. Sayyadmanesh,Iran,MID,74,6500000,KVC Westerlo,True
+611,A. Gholizadeh,Iran,MID,71,1800000,Lech Poznań,True
+612,M. Hosseini,Iran,DEF,68,1100000,Kayserispor,True
+613,A. Abedzadeh,Iran,GK,68,600000,CD Castellón,True
+614,A. Karimi,Iran,MID,67,725000,Kayserispor,True
+615,M. Doski,Iraq,DEF,68,1500000,Viktoria Plzeň,True
+616,M. Jeahze,Iraq,DEF,68,1100000,Sarpsborg 08 FF,True
+617,Z. Iqbal,Iraq,MID,68,2600000,FC Utrecht,True
+618,I. Bayesh,Iraq,MID,68,1600000,Al Riyadh,True
+619,A. Sher,Iraq,MID,67,2200000,Sarpsborg 08 FF,True
+620,M. Madjed,Iraq,MID,66,1900000,Hammarby Fotboll,True
+621,A. Al Hamadi,Iraq,FWD,66,1700000,Luton Town,True
+622,M. Farji,Iraq,FWD,66,2100000,Strømsgodset IF,True
+623,K. Yakob,Iraq,MID,66,1200000,Aarhus Gymnastikforening,True
+624,A. Al-Ammari,Iraq,MID,65,750000,Cracovia,True
+625,D. Al Saed,Iraq,MID,65,850000,BK Häcken,True
+626,A. Jasim,Iraq,MID,62,975000,Al-Najma SC,True
+627,M. Al-Taay,Iraq,MID,61,600000,Western Sydney Wanderers,True
+628,A. Al-Hamawi,Iraq,FWD,60,500000,Randers FC,True
+629,T. Kubo,Japan,MID,82,43500000,Real Sociedad,True
+630,R. Doan,Japan,MID,82,32500000,Eintracht Frankfurt,True
+631,K. Mitoma,Japan,MID,82,30500000,Brighton & Hove Albion,True
+632,D. Maeda,Japan,FWD,79,18500000,Celtic,True
+633,K. Sano,Japan,MID,79,23000000,1. FSV Mainz 05,True
+634,H. Morita,Japan,MID,79,17000000,Sporting CP,True
+635,W. Endo,Japan,MID,79,11500000,Liverpool,True
+636,H. Ito,Japan,DEF,78,17500000,FC Bayern München,True
+637,T. Minamino,Japan,MID,78,13500000,AS Monaco,True
+638,K. Itakura,Japan,DEF,77,10000000,Ajax,True
+639,D. Kamada,Japan,MID,77,10500000,Crystal Palace,True
+640,J. Ito,Japan,MID,77,8500000,KRC Genk,True
+641,A. Tanaka,Japan,MID,76,9000000,Leeds United,True
+642,K. Machida,Japan,DEF,76,7000000,TSG 1899 Hoffenheim,True
+643,R. Hatate,Japan,MID,76,8500000,Celtic,True
+644,K. Nakamura,Japan,MID,76,10000000,Stade de Reims,True
+645,S. Machino,Japan,FWD,75,7500000,Borussia Mönchengladbach,True
+646,T. Asano,Japan,MID,75,5500000,RCD Mallorca,True
+647,K. Furuhashi,Japan,FWD,75,5500000,Birmingham City,True
+648,T. Watanabe,Japan,DEF,75,4800000,Feyenoord,True
+649,A. Ueda,Japan,FWD,74,5000000,Feyenoord,True
+650,K. Fujimoto,Japan,MID,74,5500000,Birmingham City,True
+651,Y. Sugawara,Japan,DEF,74,5500000,SV Werder Bremen,True
+652,S. Maikuma,Japan,DEF,74,4400000,AZ Alkmaar,True
+653,Z. Suzuki,Japan,GK,74,8000000,Parma,True
+654,T. Sakamoto,Japan,MID,72,2400000,Coventry City,True
+655,K. Saito,Japan,MID,72,3500000,Queens Park Rangers,False
+656,Y. Takaoka,Japan,GK,72,1600000,Vancouver Whitecaps FC,False
+657,M. Yamane,Japan,DEF,72,1700000,LA Galaxy,False
+658,K. Takai,Japan,DEF,72,4300000,Tottenham Hotspur,False
+659,M. Al Tamari,Jordan,MID,75,5500000,Stade Rennais FC,True
+660,Y. Al Arab,Jordan,DEF,75,4700000,FC Seoul,True
+661,I. Sabra,Jordan,FWD,61,775000,Göztepe SK,True
+662,J. Quiñones,Mexico,FWD,80,21500000,Al Qadsiah FC,True
+663,S. Giménez,Mexico,FWD,79,27000000,AC Milan,True
+664,L. Malagón,Mexico,GK,79,0,nan,True
+665,G. Berterame,Mexico,FWD,78,0,nan,True
+666,R. Alvarado,Mexico,MID,78,0,nan,True
+667,H. Lozano,Mexico,FWD,78,14000000,San Diego FC,True
+668,E. Álvarez,Mexico,MID,78,14500000,Fenerbahçe SK,True
+669,E. Sánchez,Mexico,MID,78,0,nan,True
+670,A. Vega,Mexico,FWD,78,0,nan,True
+671,O. Pineda,Mexico,MID,77,10500000,AEK Athens,True
+672,R. Jiménez,Mexico,FWD,77,5000000,Fulham FC,True
+673,D. Lainez,Mexico,MID,76,0,nan,True
+674,C. Rodríguez,Mexico,MID,76,0,nan,True
+675,M. Ruiz,Mexico,MID,75,0,nan,True
+676,C. Montes,Mexico,DEF,75,0,nan,True
+677,J. Vásquez,Mexico,DEF,75,6500000,Genoa,True
+678,J. Gallardo,Mexico,DEF,75,0,nan,True
+679,J. Araujo,Mexico,DEF,74,8000000,AFC Bournemouth,True
+680,J. Sánchez,Mexico,DEF,73,0,nan,True
+681,C. Huerta,Mexico,FWD,73,4400000,RSC Anderlecht,True
+682,J. Orozco Chiquete,Mexico,DEF,73,0,nan,True
+683,E. Lira,Mexico,MID,73,0,nan,True
+684,R. Rangel,Mexico,GK,72,0,nan,True
+685,M. Chávez,Mexico,DEF,72,4500000,AZ Alkmaar,True
+686,R. Huescas,Mexico,DEF,72,5000000,FC København,True
+687,J. Sánchez Purata,Mexico,DEF,72,0,nan,True
+688,C. Moreno,Mexico,GK,72,0,nan,False
+689,O. Vargas,Mexico,MID,69,3000000,Seattle Sounders FC,False
+690,Álex Padilla,Mexico,GK,68,2300000,Athletic Club,False
+691,L. Martínez Dupuy,Mexico,FWD,67,2100000,Godoy Cruz,False
+692,A. Hakimi,Morocco,DEF,89,111000000,Paris Saint-Germain,True
+693,Y. Bounou,Morocco,GK,82,5000000,Al Hilal,True
+694,Brahim,Morocco,MID,82,36500000,Real Madrid,True
+695,Y. En-Nesyri,Morocco,FWD,82,31000000,Fenerbahçe SK,True
+696,N. Aguerd,Morocco,DEF,81,24000000,Olympique de Marseille,True
+697,A. El Kaabi,Morocco,FWD,80,17000000,Olympiacos FC,True
+698,N. Mazraoui,Morocco,DEF,80,22000000,Manchester United,True
+699,A. Hamdallah,Morocco,FWD,79,8500000,Al Shabab,True
+700,I. Saibari,Morocco,MID,79,26500000,PSV,True
+701,R. Saïss,Morocco,DEF,79,0,nan,True
+702,H. Ziyech,Morocco,MID,78,0,nan,True
+703,A. Adli,Morocco,FWD,78,20000000,AFC Bournemouth,True
+704,S. Amrabat,Morocco,MID,78,12500000,Real Betis Balompié,True
+705,S. Rahimi,Morocco,MID,78,14000000,Al Ain,True
+706,O. El Hilali,Morocco,DEF,77,16000000,RCD Espanyol,True
+707,N. El Aynaoui,Morocco,MID,77,16500000,Roma,True
+708,Abde,Morocco,MID,77,16500000,Real Betis Balompié,True
+709,M. Batna,Morocco,MID,77,4300000,Al Fateh,True
+710,A. Ounahi,Morocco,MID,76,11000000,Girona FC,True
+711,B. El Khannouss,Morocco,MID,76,17000000,VfB Stuttgart,True
+712,E. Ben Seghir,Morocco,MID,76,16500000,Bayer 04 Leverkusen,True
+713,O. Sahraoui,Morocco,MID,76,12000000,Lille OSC,True
+714,Z. El Ouahdi,Morocco,DEF,76,14500000,KRC Genk,True
+715,S. Diop,Morocco,FWD,76,10000000,OGC Nice,True
+716,A. Harit,Morocco,MID,75,5500000,Medipol Başakşehir FK,True
+717,S. El Karouani,Morocco,DEF,75,7500000,FC Utrecht,True
+718,I. Akhomach,Morocco,MID,74,9500000,Villarreal CF,False
+719,M. Mohand Mohamedi,Morocco,GK,74,0,nan,False
+720,I. Chair,Morocco,MID,74,4500000,Queens Park Rangers,False
+721,A. Zaroury,Morocco,FWD,74,6500000,Panathinaikos FC,False
+722,V. van Dijk,Netherlands,DEF,90,57000000,Liverpool,True
+723,F. de Jong,Netherlands,MID,87,79500000,FC Barcelona,True
+724,T. Reijnders,Netherlands,MID,86,79500000,Manchester City,True
+725,R. Gravenberch,Netherlands,MID,85,66500000,Liverpool,True
+726,D. Dumfries,Netherlands,DEF,84,37000000,Inter,True
+727,C. Gakpo,Netherlands,MID,84,49500000,Liverpool,True
+728,S. de Vrij,Netherlands,DEF,84,20000000,Inter,True
+729,X. Simons,Netherlands,MID,84,58500000,Tottenham Hotspur,True
+730,J. Frimpong,Netherlands,DEF,83,43500000,Liverpool,True
+731,N. Aké,Netherlands,DEF,83,30000000,Manchester City,True
+732,S. Botman,Netherlands,DEF,82,36000000,Newcastle United,True
+733,J. Timber,Netherlands,DEF,82,38500000,Arsenal,True
+734,M. de Ligt,Netherlands,DEF,82,34000000,Manchester United,True
+735,M. van de Ven,Netherlands,DEF,82,37000000,Tottenham Hotspur,True
+736,M. de Roon,Netherlands,MID,81,12000000,Atalanta,True
+737,M. Depay,Netherlands,FWD,81,0,nan,True
+738,T. Koopmeiners,Netherlands,MID,81,27500000,Juventus,True
+739,Q. Timber,Netherlands,MID,80,31500000,Feyenoord,True
+740,J. Schouten,Netherlands,MID,80,20500000,PSV,True
+741,J. van Hecke,Netherlands,DEF,80,25000000,Brighton & Hove Albion,True
+742,S. Bergwijn,Netherlands,MID,80,22500000,Al Ittihad,True
+743,N. Lang,Netherlands,FWD,80,25000000,Napoli,True
+744,J. Clasie,Netherlands,MID,79,6000000,AZ Alkmaar,True
+745,D. Malen,Netherlands,MID,79,20500000,Aston Villa,True
+746,J. Veerman,Netherlands,MID,79,21500000,PSV,True
+747,J. Kluivert,Netherlands,MID,79,21500000,AFC Bournemouth,True
+748,I. Maatsen,Netherlands,DEF,79,24500000,Aston Villa,False
+749,J. Cillessen,Netherlands,GK,79,1900000,NEC Nijmegen,False
+750,W. Weghorst,Netherlands,FWD,78,11500000,Ajax,False
+751,L. de Jong,Netherlands,FWD,78,7000000,FC Porto,False
+752,C. Wood,New Zealand,FWD,82,19500000,Nottingham Forest,True
+753,J. Bell,New Zealand,MID,74,5000000,Viking FK,True
+754,L. Cacace,New Zealand,DEF,72,3300000,Wrexham,True
+755,A. Paulsen,New Zealand,GK,71,3600000,Lechia Gdańsk,True
+756,M. Stamenić,New Zealand,MID,71,3900000,Swansea City,True
+757,M. Boxall,New Zealand,DEF,70,275000,Minnesota United FC,True
+758,T. Bindon,New Zealand,DEF,69,3200000,Sheffield United,True
+759,F. de Vries,New Zealand,DEF,69,1200000,Auckland FC,True
+760,F. Surman,New Zealand,DEF,68,2300000,Portland Timbers,True
+761,B. Old,New Zealand,FWD,68,2700000,AS Saint-Étienne,True
+762,K. Barbarouses,New Zealand,FWD,68,525000,Western Sydney Wanderers,True
+763,C. McCowatt,New Zealand,MID,67,1300000,Silkeborg IF,True
+764,A. Rufer,New Zealand,MID,67,875000,Wellington Phoenix,True
+765,N. Pijnaker,New Zealand,DEF,67,1100000,Auckland FC,True
+766,E. Just,New Zealand,FWD,66,1100000,Motherwell FC,True
+767,R. Thomas,New Zealand,MID,66,825000,PEC Zwolle,True
+768,M. Crocombe,New Zealand,GK,65,375000,Millwall FC,True
+769,M. Garbett,New Zealand,MID,65,1100000,Peterborough United,True
+770,B. Tuiloma,New Zealand,DEF,65,575000,Charlotte FC,True
+771,J. McGarry,New Zealand,DEF,64,625000,Brisbane Roar,True
+772,L. Rogerson,New Zealand,MID,64,625000,Auckland FC,True
+773,T. Payne,New Zealand,DEF,63,350000,Wellington Phoenix,True
+774,S. Sutton,New Zealand,DEF,63,1000000,Perth Glory,True
+775,O. Sail,New Zealand,GK,63,375000,Auckland FC,True
+776,C. Elliot,New Zealand,DEF,62,475000,Auckland FC,True
+777,L. Bayliss,New Zealand,MID,62,900000,Newcastle Jets,True
+778,S. Roux,New Zealand,DEF,62,275000,Central Coast Mariners,False
+779,I. Hughes,New Zealand,DEF,62,825000,Wellington Phoenix,False
+780,C. Howieson,New Zealand,MID,62,375000,Auckland FC,False
+781,B. Waine,New Zealand,FWD,62,600000,Port Vale,False
+782,E. Haaland,Norway,FWD,90,157000000,Manchester City,True
+783,M. Ødegaard,Norway,MID,87,98000000,Arsenal,True
+784,A. Sørloth,Norway,FWD,84,42000000,Atlético Madrid,True
+785,F. Aursnes,Norway,MID,80,20500000,SL Benfica,True
+786,S. Berge,Norway,MID,79,18000000,Fulham FC,True
+787,J. Ryerson,Norway,DEF,79,18500000,Borussia Dortmund,True
+788,J. Larsen,Norway,FWD,78,21000000,Wolverhampton Wanderers,True
+789,P. Berg,Norway,MID,77,12000000,FK Bodø/Glimt,True
+790,Ø. Nyland,Norway,GK,76,1300000,Sevilla FC,True
+791,A. Nusa,Norway,MID,76,18000000,RB Leipzig,True
+792,Z. Tripić,Norway,FWD,76,6000000,Viking FK,True
+793,M. Elyounoussi,Norway,MID,76,7000000,FC København,True
+794,K. Thorstvedt,Norway,MID,75,6500000,Sassuolo,True
+795,A. Schjelderup,Norway,FWD,75,12500000,SL Benfica,True
+796,A. Dønnum,Norway,MID,75,6000000,Toulouse FC,True
+797,J. Svensson,Norway,DEF,75,3900000,Beşiktaş JK,True
+798,K. Ajer,Norway,DEF,75,6000000,Brentford,True
+799,A. Hanche-Olsen,Norway,DEF,75,5500000,1. FSV Mainz 05,True
+800,J. King,Norway,FWD,74,2700000,Al Khaleej,True
+801,F. Bjørkan,Norway,DEF,74,4500000,FK Bodø/Glimt,True
+802,F. Myhre,Norway,MID,74,5500000,SK Brann,True
+803,J. Hauge,Norway,FWD,74,5500000,FK Bodø/Glimt,True
+804,M. Eikrem,Norway,MID,74,2000000,Molde FK,True
+805,M. Dæhli,Norway,MID,73,2500000,Molde FK,True
+806,H. Evjen,Norway,MID,73,4200000,FK Bodø/Glimt,True
+807,O. Edvardsen,Norway,FWD,73,3600000,Ajax,True
+808,D. Wolfe,Norway,DEF,73,4300000,Wolverhampton Wanderers,False
+809,J. Glesnes,Norway,DEF,73,2100000,Philadelphia Union,False
+810,S. Nordli,Norway,MID,73,3600000,Rosenborg BK,False
+811,T. Heggem,Norway,DEF,73,3500000,Bologna,False
+812,A. Murillo,Panama,DEF,76,6500000,Olympique de Marseille,True
+813,L. Mejía,Panama,GK,72,400000,Club Nacional de Football,True
+814,A. Godoy,Panama,MID,70,650000,San Diego FC,True
+815,O. Mosquera,Panama,GK,70,1200000,Al Fayha,True
+816,A. Andrade,Panama,DEF,69,1700000,LASK Linz,True
+817,E. Guerrero,Panama,FWD,69,1900000,Dynamo Kyiv,True
+818,J. Córdoba,Panama,DEF,68,1700000,Norwich City,True
+819,J. Fajardo,Panama,FWD,68,1000000,Universidad Católica del Ecuador,True
+820,E. Cedeño,Panama,MID,66,1900000,UD Las Palmas,True
+821,C. Harvey,Panama,DEF,65,900000,Minnesota United FC,True
+822,A. Londoño,Panama,FWD,65,1400000,Universidad Católica del Ecuador,True
+823,L. Heráldez,Panama,MID,64,400000,Caracas FC,True
+824,M. Krug,Panama,DEF,62,875000,Levante UD,True
+825,O. Valencia,Panama,DEF,59,525000,New York Red Bulls,True
+826,Rafael Mosquera,Panama,FWD,54,250000,New York Red Bulls,True
+827,Kaku,Paraguay,MID,79,17000000,Al Ain,True
+828,O. Alderete,Paraguay,DEF,78,13500000,Sunderland,True
+829,D. Viera,Paraguay,DEF,76,2400000,Libertad,True
+830,M. Almirón,Paraguay,FWD,76,6000000,Atlanta United,True
+831,A. Sanabria,Paraguay,FWD,76,7500000,Cremonese,True
+832,R. Sánchez,Paraguay,MID,75,5500000,Racing Club,True
+833,A. Arce,Paraguay,FWD,75,5500000,Independiente Rivadavia,True
+834,G. Ávalos,Paraguay,FWD,75,2700000,Independiente,True
+835,M. Rojas,Paraguay,FWD,74,4099999,Portland Timbers,True
+836,L. Melgarejo,Paraguay,FWD,74,2000000,Libertad,True
+837,A. Cubas,Paraguay,MID,74,3600000,Vancouver Whitecaps FC,True
+838,J. Enciso,Paraguay,MID,73,7000000,RC Strasbourg Alsace,True
+839,D. González,Paraguay,FWD,73,2600000,Club Olimpia,True
+840,M. Galarza,Paraguay,MID,73,6000000,River Plate,True
+841,G. Velázquez,Paraguay,DEF,73,1000000,Cerro Porteño,True
+842,D. Gómez,Paraguay,MID,73,6000000,Brighton & Hove Albion,True
+843,C. Domínguez,Paraguay,MID,73,2900000,Cerro Porteño,True
+844,S. Arzamendia,Paraguay,DEF,73,2900000,Estudiantes de La Plata,True
+845,A. Sández,Paraguay,DEF,73,4500000,Rosario Central,True
+846,C. González,Paraguay,FWD,73,2500000,Newell's Old Boys,True
+847,I. Leguizamón,Paraguay,FWD,72,3800000,Club Olimpia,True
+848,M. Espinoza,Paraguay,DEF,72,2300000,Libertad,True
+849,W. Riveros,Paraguay,DEF,72,1500000,Universitario de Deportes,True
+850,C. Coronel,Paraguay,GK,72,2200000,New York Red Bulls,True
+851,Á. Campuzano,Paraguay,MID,71,1600000,Libertad,True
+852,S. Salcedo,Paraguay,DEF,71,2000000,Newell's Old Boys,True
+853,I. Ramírez,Paraguay,DEF,71,1600000,Libertad,False
+854,R. Rojas,Paraguay,DEF,71,1600000,Libertad,False
+855,I. Franco,Paraguay,FWD,71,2500000,Libertad,False
+856,R. Morínigo,Paraguay,GK,71,2200000,Libertad,False
+857,Vitinha,Portugal,MID,89,128500000,Paris Saint-Germain,True
+858,Bruno Fernandes,Portugal,MID,87,77000000,Manchester United,True
+859,Nuno Mendes,Portugal,DEF,86,86000000,Paris Saint-Germain,True
+860,Rúben Dias,Portugal,DEF,86,64500000,Manchester City,True
+861,João Neves,Portugal,MID,85,79500000,Paris Saint-Germain,True
+862,Cristiano Ronaldo,Portugal,FWD,85,0,Al Nassr,True
+863,Rafael Leão,Portugal,FWD,84,49500000,AC Milan,True
+864,Diogo Costa,Portugal,GK,84,49500000,FC Porto,True
+865,João Cancelo,Portugal,DEF,84,30500000,Al Hilal,True
+866,Bernardo Silva,Portugal,MID,84,40500000,Manchester City,True
+867,Rúben Neves,Portugal,MID,84,40500000,Al Hilal,True
+868,Palhinha,Portugal,MID,83,31000000,Tottenham Hotspur,True
+869,Pedro Gonçalves,Portugal,MID,83,38500000,Sporting CP,True
+870,Otávio,Portugal,MID,82,29500000,Al Qadsiah FC,True
+871,Rafa,Portugal,MID,82,24000000,Beşiktaş JK,True
+872,Trincão,Portugal,MID,82,38000000,Sporting CP,True
+873,Gonçalo Inácio,Portugal,DEF,81,35000000,Sporting CP,True
+874,Danilo Pereira,Portugal,DEF,81,12500000,Al Ittihad,True
+875,Rui Silva,Portugal,GK,81,13500000,Sporting CP,True
+876,Ricardo Horta,Portugal,MID,81,25000000,Sporting Clube de Braga,True
+877,Florentino,Portugal,MID,80,25000000,Burnley,True
+878,Pedro Neto,Portugal,MID,80,26500000,Chelsea,True
+879,Gonçalo Ramos,Portugal,FWD,80,30500000,Paris Saint-Germain,True
+880,R. Guerreiro,Portugal,DEF,80,15500000,FC Bayern München,True
+881,Nuno Santos,Portugal,MID,79,17000000,Sporting CP,True
+882,Francisco Conceição,Portugal,MID,79,35500000,Juventus,True
+883,Fábio Silva,Portugal,FWD,79,28500000,Borussia Dortmund,False
+884,Diogo Dalot,Portugal,DEF,79,20000000,Manchester United,False
+885,Matheus Nunes,Portugal,DEF,79,19000000,Manchester City,False
+886,João Félix,Portugal,MID,79,23000000,Al Nassr,False
+887,A. Afif,Qatar,MID,78,0,nan,True
+888,Guilherme,Qatar,MID,77,0,nan,True
+889,Edmilson Junior,Qatar,FWD,76,0,nan,True
+890,A. Ali,Qatar,FWD,74,0,nan,True
+891,H. Al Haydos,Qatar,MID,71,0,nan,True
+892,B. Khoukhi,Qatar,DEF,71,0,nan,True
+893,K. Boudiaf,Qatar,MID,71,0,nan,True
+894,A. Hassan,Qatar,DEF,70,0,nan,True
+895,A. Hatem,Qatar,MID,70,0,nan,True
+896,Lucas Mendes,Qatar,DEF,70,0,nan,True
+897,M. Barsham,Qatar,GK,70,0,nan,True
+898,B. Al Rawi,Qatar,DEF,69,0,nan,True
+899,Pedro Miguel,Qatar,DEF,68,0,nan,True
+900,H. Ahmed,Qatar,DEF,68,0,nan,True
+901,A. Fathi,Qatar,MID,68,0,nan,True
+902,T. Salman,Qatar,DEF,68,0,nan,True
+903,A. Al Ganehi,Qatar,FWD,67,0,nan,True
+904,M. Muntari,Qatar,FWD,66,0,nan,True
+905,Y. Abdurisag,Qatar,FWD,65,0,nan,True
+906,A. Madibo,Qatar,MID,65,0,nan,True
+907,S. Al Sheeb,Qatar,GK,65,0,nan,True
+908,M. Mashaal,Qatar,MID,64,0,nan,True
+909,S. Zakaria,Qatar,GK,64,0,nan,True
+910,A. Yousef,Qatar,DEF,63,0,nan,True
+911,A. Al Yazidi,Qatar,DEF,63,0,nan,True
+912,J. Gaber,Qatar,DEF,63,0,nan,True
+913,M. Badreldin,Qatar,GK,62,0,nan,False
+914,A. Suhail,Qatar,DEF,61,0,nan,False
+915,A. Al Rawi,Qatar,FWD,60,0,nan,False
+916,M. Gouda,Qatar,FWD,59,0,nan,False
+917,S. Al Dawsari,Saudi Arabia,MID,82,19000000,Al Hilal,True
+918,S. Abdulhamid,Saudi Arabia,DEF,75,7000000,RC Lens,True
+919,F. Al Birekan,Saudi Arabia,MID,75,7500000,Al Ahli SFC,True
+920,M. Al Juwair,Saudi Arabia,MID,75,11500000,Al Qadsiah FC,True
+921,M. Kanno,Saudi Arabia,MID,72,2200000,Al Hilal,True
+922,H. Tombakti,Saudi Arabia,DEF,72,3100000,Al Hilal,True
+923,S. Al Ghannam,Saudi Arabia,DEF,72,1700000,Al Nassr,True
+924,N. Al Aqidi,Saudi Arabia,GK,72,2900000,Al Nassr,True
+925,A. Sharahili,Saudi Arabia,DEF,71,1300000,Al Ittihad,True
+926,H. Kadish,Saudi Arabia,DEF,71,1300000,Al Ittihad,True
+927,A. Ghareeb,Saudi Arabia,MID,70,1600000,Al Nassr,True
+928,A. Lajami,Saudi Arabia,DEF,70,1500000,Al Hilal,True
+929,A. Al Amri,Saudi Arabia,DEF,70,1600000,Al Nassr,True
+930,M. Al Shanqeeti,Saudi Arabia,DEF,70,1900000,Al Ittihad,True
+931,M. Al Buraik,Saudi Arabia,DEF,70,1100000,NEOM SC,True
+932,A. Al Obud,Saudi Arabia,MID,70,1500000,Al Ittihad,True
+933,A. Al Bulayhi,Saudi Arabia,DEF,70,425000,Al Hilal,True
+934,A. Majrashi,Saudi Arabia,DEF,70,2200000,Al Ahli SFC,True
+935,S. Al Amri,Saudi Arabia,MID,69,1200000,Al Khaleej,True
+936,S. Al Faraj,Saudi Arabia,MID,69,550000,NEOM SC,True
+937,S. Al Shehri,Saudi Arabia,FWD,69,1200000,Al Ittihad,True
+938,A. Al Khaibari,Saudi Arabia,MID,68,1100000,Al Nassr,True
+939,A. Yahya,Saudi Arabia,MID,68,1900000,Al Nassr,True
+940,F. Al Ghamdi,Saudi Arabia,MID,68,2300000,Al Ittihad,True
+941,N. Al Dawsari,Saudi Arabia,MID,68,1600000,Al Hilal,True
+942,M. Hamzi,Saudi Arabia,MID,68,600000,Al Khaleej,True
+943,M. Al Saad,Saudi Arabia,MID,68,2500000,FC Lausanne-Sport,False
+944,M. Al Harbi,Saudi Arabia,DEF,67,1400000,Al Hilal,False
+945,M. Ali,Saudi Arabia,MID,67,950000,Al Ettifaq,False
+946,A. Al Salem,Saudi Arabia,FWD,67,825000,Al Qadsiah FC,False
+947,S. McTominay,Scotland,MID,85,54000000,Napoli,True
+948,A. Robertson,Scotland,DEF,82,22000000,Liverpool,True
+949,J. McGinn,Scotland,MID,81,25000000,Aston Villa,True
+950,C. McGregor,Scotland,MID,79,11500000,Celtic,True
+951,R. Christie,Scotland,MID,79,14500000,AFC Bournemouth,True
+952,R. Gauld,Scotland,FWD,78,14000000,Vancouver Whitecaps FC,True
+953,L. Ferguson,Scotland,MID,78,18500000,Bologna,True
+954,K. Tierney,Scotland,DEF,77,9500000,Celtic,True
+955,C. Adams,Scotland,FWD,77,11000000,Torino,True
+956,S. McKenna,Scotland,DEF,75,5500000,Dinamo Zagreb,True
+957,B. Gilmour,Scotland,MID,74,6500000,Napoli,True
+958,G. Taylor,Scotland,DEF,74,4400000,PAOK,True
+959,J. Hendry,Scotland,DEF,74,3500000,Al Ettifaq,True
+960,A. Hickey,Scotland,DEF,74,6000000,Brentford,True
+961,T. Cairney,Scotland,MID,74,1900000,Fulham FC,True
+962,O. McBurnie,Scotland,FWD,74,4200000,Hull City,True
+963,J. Souttar,Scotland,DEF,73,2900000,Rangers FC,True
+964,B. Bannan,Scotland,MID,73,1200000,Sheffield Wednesday,True
+965,J. Holsgrove,Scotland,MID,73,3800000,GD Estoril Praia,True
+966,O. Burke,Scotland,FWD,73,3100000,1. FC Union Berlin,True
+967,L. Morgan,Scotland,FWD,73,3100000,New York Red Bulls,True
+968,L. McCowan,Scotland,MID,73,3500000,Celtic,True
+969,L. Shankland,Scotland,FWD,73,3000000,Hearts,True
+970,J. Doig,Scotland,DEF,73,4300000,Sassuolo,True
+971,A. Gunn,Scotland,GK,72,1900000,Nottingham Forest,True
+972,K. McLean,Scotland,MID,72,1200000,Norwich City,True
+973,G. Hirst,Scotland,FWD,72,2900000,Ipswich Town,False
+974,C. Barron,Scotland,MID,72,5000000,Rangers FC,False
+975,J. Forrest,Scotland,FWD,72,1500000,Celtic,False
+976,S. Armstrong,Scotland,MID,71,1200000,Aberdeen,False
+977,S. Mané,Senegal,MID,83,22500000,Al Nassr,True
+978,K. Koulibaly,Senegal,DEF,82,10000000,Al Hilal,True
+979,N. Jackson,Senegal,FWD,80,30500000,FC Bayern München,True
+980,B. Dia,Senegal,FWD,80,21500000,Lazio,True
+981,É. Mendy,Senegal,GK,80,7000000,Al Ahli SFC,True
+982,I. Gueye,Senegal,MID,79,4900000,Everton,True
+983,P. Sarr,Senegal,MID,79,27000000,Tottenham Hotspur,True
+984,I. Sarr,Senegal,MID,79,18500000,Crystal Palace,True
+985,I. Ndiaye,Senegal,MID,79,23000000,Everton,True
+986,P. Gueye,Senegal,MID,78,18000000,Villarreal CF,True
+987,Y. Diouf,Senegal,GK,78,16500000,OGC Nice,True
+988,L. Camara,Senegal,MID,77,23500000,AS Monaco,True
+989,H. Diarra,Senegal,MID,77,17000000,Sunderland,True
+990,P. Ciss,Senegal,MID,77,7500000,Rayo Vallecano,True
+991,M. Niakhaté,Senegal,DEF,77,9000000,Olympique Lyonnais,True
+992,A. Diao,Senegal,MID,76,16000000,Como,True
+993,M. Thiam,Senegal,FWD,75,4600000,Eyüpspor,True
+994,A. Ndiaye,Senegal,DEF,75,8000000,Parma,True
+995,I. Jakobs,Senegal,DEF,75,7000000,Galatasaray SK,True
+996,E. Diouf,Senegal,DEF,75,10500000,West Ham United,True
+997,B. Ndiaye,Senegal,MID,74,1400000,Gaziantep FK,True
+998,O. Ba,Senegal,DEF,74,3900000,Medipol Başakşehir FK,True
+999,A. Sima,Senegal,MID,74,6500000,RC Lens,True
+1000,K. Diatta,Senegal,MID,74,5000000,AS Monaco,True
+1001,A. Sangante,Senegal,DEF,73,5500000,Le Havre AC,True
+1002,A. Boiro,Senegal,DEF,73,6500000,Athletic Club,True
+1003,D. Lopy,Senegal,MID,73,4400000,UD Almería,False
+1004,N. Mendy,Senegal,MID,73,1500000,Watford,False
+1005,M. Fall,Senegal,MID,73,1900000,Kasımpaşa SK,False
+1006,M. N'Diaye,Senegal,DEF,72,5000000,RSC Anderlecht,False
+1007,S. Ngezana,South Africa,DEF,73,3200000,FCSB,True
+1008,L. Foster,South Africa,FWD,72,3600000,Burnley,True
+1009,G. Links,South Africa,DEF,72,2500000,Aarhus Gymnastikforening,True
+1010,B. Hlongwane,South Africa,DEF,71,2600000,Minnesota United FC,True
+1011,K. Kodisang,South Africa,MID,68,1400000,AVS Futebol SAD,True
+1012,Y. Maart,South Africa,MID,67,1000000,SV Ried,True
+1013,I. Okon,South Africa,DEF,67,1900000,Hannover 96,True
+1014,L. Le Roux,South Africa,MID,66,1200000,Portsmouth,True
+1015,S. Sithole,South Africa,MID,65,900000,CD Tondela,True
+1016,S. Campbell,South Africa,FWD,65,1800000,Club Brugge KV,True
+1017,M. Nkota,South Africa,FWD,64,1400000,Al Ettifaq,True
+1018,S. Kabini,South Africa,DEF,63,1100000,Molde FK,True
+1019,A. van Wyk,South Africa,FWD,62,575000,SV Ried,True
+1020,K. Chauke,South Africa,MID,61,525000,Burton Albion,True
+1021,O. Makhanya,South Africa,DEF,57,375000,Philadelphia Union,True
+1022,E. Mokwana,South Africa,FWD,51,70000,Al Hazem FC,True
+1023,H. Son,South Korea,FWD,85,43000000,Los Angeles FC,True
+1024,Kim Min Jae,South Korea,DEF,82,29000000,FC Bayern München,True
+1025,Lee Kang In,South Korea,FWD,79,26500000,Paris Saint-Germain,True
+1026,Hwang In Beom,South Korea,MID,77,10500000,Feyenoord,True
+1027,Lee Jae Sung,South Korea,MID,77,8500000,1. FSV Mainz 05,True
+1028,Jo Hyeon Woo,South Korea,GK,75,1800000,Ulsan HD FC,True
+1029,Lee Dong Kyeong,South Korea,MID,75,6000000,Gimcheon Sangmu FC,True
+1030,Hwang Hee Chan,South Korea,FWD,75,5500000,Wolverhampton Wanderers,True
+1031,Lee Chang Geun,South Korea,GK,74,2200000,Daejeon Citizen,True
+1032,Joo Min Kyu,South Korea,FWD,74,1800000,Daejeon Citizen,True
+1033,Song Bum Keun,South Korea,GK,74,4400000,Jeonbuk Hyundai Motors,True
+1034,Hong Hyeon Seok,South Korea,MID,73,3800000,FC Nantes,True
+1035,Jeong Woo Yeong,South Korea,MID,73,4000000,1. FC Union Berlin,True
+1036,Kim Bong Soo,South Korea,MID,72,3000000,Daejeon Citizen,True
+1037,Paik Seung Ho,South Korea,MID,72,2100000,Birmingham City,True
+1038,Jeon Jin Woo,South Korea,FWD,72,2800000,Jeonbuk Hyundai Motors,True
+1039,Park Seung Wook,South Korea,DEF,71,1600000,Pohang Steelers,True
+1040,Oh Hyeon Gyu,South Korea,FWD,71,3000000,KRC Genk,True
+1041,Bae Jun Ho,South Korea,MID,71,4200000,Stoke City,True
+1042,Park Jin Seob,South Korea,DEF,71,1600000,Jeonbuk Hyundai Motors,True
+1043,Hwang Ui Jo,South Korea,FWD,71,1500000,Alanyaspor,True
+1044,Kim Jin Kyu,South Korea,MID,71,1900000,Jeonbuk Hyundai Motors,True
+1045,Lee Ho Jae,South Korea,FWD,71,2900000,Pohang Steelers,True
+1046,Ko Seung Beom,South Korea,MID,71,1500000,Ulsan HD FC,True
+1047,Jeong Seung Won,South Korea,MID,71,1900000,FC Seoul,True
+1048,Eom Ji Sung,South Korea,MID,71,4200000,Swansea City,True
+1049,Lee Myung Jae,South Korea,DEF,70,1200000,Daejeon Citizen,False
+1050,Song Min Kyu,South Korea,MID,70,1900000,Jeonbuk Hyundai Motors,False
+1051,Park Ji Soo,South Korea,DEF,70,1100000,Wuhan Three Towns,False
+1052,Seo Min Woo,South Korea,MID,70,1600000,Gangwon FC,False
+1053,Rodri,Spain,MID,90,102000000,Manchester City,True
+1054,Lamine Yamal,Spain,MID,89,147000000,FC Barcelona,True
+1055,Pedri,Spain,MID,89,149500000,FC Barcelona,True
+1056,David Raya,Spain,GK,87,54500000,Arsenal,True
+1057,Nico Williams,Spain,MID,86,94500000,Athletic Club,True
+1058,Carvajal,Spain,DEF,85,28000000,Real Madrid,True
+1059,Dani Olmo,Spain,MID,85,62000000,FC Barcelona,True
+1060,Iñigo Martínez,Spain,DEF,85,17500000,Al Nassr,True
+1061,Fabián Ruiz,Spain,MID,85,52500000,Paris Saint-Germain,True
+1062,De Gea,Spain,GK,85,9000000,Fiorentina,True
+1063,Unai Simón,Spain,GK,85,43000000,Athletic Club,True
+1064,Vivian,Spain,DEF,84,49500000,Athletic Club,True
+1065,Álex Baena,Spain,MID,84,63500000,Atlético Madrid,True
+1066,Grimaldo,Spain,MID,84,41500000,Bayer 04 Leverkusen,True
+1067,Marc Cucurella,Spain,DEF,84,45500000,Chelsea,True
+1068,Sancet,Spain,MID,84,58500000,Athletic Club,True
+1069,Isco,Spain,MID,84,26500000,Real Betis Balompié,True
+1070,Marcos Llorente,Spain,DEF,84,36500000,Atlético Madrid,True
+1071,Iago Aspas,Spain,FWD,83,12000000,RC Celta,True
+1072,R. Le Normand,Spain,DEF,83,36500000,Atlético Madrid,True
+1073,Balde,Spain,DEF,83,49500000,FC Barcelona,True
+1074,Ferran Torres,Spain,FWD,83,48000000,FC Barcelona,True
+1075,Álex Remiro,Spain,GK,83,27500000,Real Sociedad,True
+1076,Gavi,Spain,MID,83,56000000,FC Barcelona,True
+1077,Aleix García,Spain,MID,83,36500000,Bayer 04 Leverkusen,True
+1078,Joan García,Spain,GK,83,46500000,FC Barcelona,True
+1079,Mikel Merino,Spain,MID,83,35500000,Arsenal,False
+1080,Zubimendi,Spain,MID,83,45500000,Arsenal,False
+1081,Ayoze,Spain,FWD,83,30500000,Villarreal CF,False
+1082,Berenguer,Spain,MID,82,30000000,Athletic Club,False
+1083,A. Isak,Sweden,FWD,88,111000000,Liverpool,True
+1084,V. Gyökeres,Sweden,FWD,87,93000000,Arsenal,True
+1085,D. Kulusevski,Sweden,MID,83,47500000,Tottenham Hotspur,True
+1086,A. Elanga,Sweden,FWD,81,35000000,Newcastle United,True
+1087,E. Forsberg,Sweden,MID,79,11000000,New York Red Bulls,True
+1088,H. Larsson,Sweden,MID,78,31500000,Eintracht Frankfurt,True
+1089,I. Hien,Sweden,DEF,78,16500000,Atalanta,True
+1090,C. Starfelt,Sweden,DEF,78,11500000,RC Celta,True
+1091,L. Bergvall,Sweden,MID,77,22500000,Tottenham Hotspur,True
+1092,G. Gudmundsson,Sweden,DEF,77,11500000,Leeds United,True
+1093,D. Svensson,Sweden,DEF,77,15000000,Borussia Dortmund,True
+1094,S. Nanasi,Sweden,MID,76,15000000,RC Strasbourg Alsace,True
+1095,N. Eliasson,Sweden,MID,76,7500000,AEK Athens,True
+1096,M. Svanberg,Sweden,MID,76,9500000,VfL Wolfsburg,True
+1097,J. Cajuste,Sweden,MID,75,7000000,Ipswich Town,True
+1098,Y. Ayari,Sweden,MID,75,11500000,Brighton & Hove Albion,True
+1099,J. Karlsson,Sweden,MID,75,6000000,Aberdeen,True
+1100,G. Nilsson,Sweden,FWD,75,6000000,Club Brugge KV,True
+1101,V. Lindelöf,Sweden,DEF,75,4600000,Aston Villa,True
+1102,E. Smith,Sweden,MID,75,5500000,FC St. Pauli,True
+1103,J. Karlström,Sweden,MID,75,4700000,Udinese,True
+1104,M. Ishak,Sweden,FWD,74,3400000,Lech Poznań,True
+1105,W. Swedberg,Sweden,FWD,74,8500000,RC Celta,True
+1106,V. Johansson,Sweden,GK,74,4000000,Stoke City,True
+1107,K. Mrabti,Sweden,MID,74,3500000,KV Mechelen,True
+1108,E. Holm,Sweden,DEF,74,5500000,Bologna,True
+1109,P. Jansson,Sweden,DEF,73,1000000,Malmö FF,False
+1110,D. Bojanić,Sweden,MID,73,2900000,Ulsan HD FC,False
+1111,E. Krafth,Sweden,DEF,73,2500000,Newcastle United,False
+1112,I. Lidberg,Sweden,FWD,73,3600000,SV Darmstadt 98,False
+1113,Y. Sommer,Switzerland,GK,87,9000000,Inter,True
+1114,G. Kobel,Switzerland,GK,86,66500000,Borussia Dortmund,True
+1115,G. Xhaka,Switzerland,MID,85,36000000,Sunderland,True
+1116,D. Zakaria,Switzerland,MID,82,29500000,AS Monaco,True
+1117,F. Schär,Switzerland,DEF,82,14500000,Newcastle United,True
+1118,M. Akanji,Switzerland,DEF,82,25500000,Inter,True
+1119,R. Freuler,Switzerland,MID,81,13000000,Bologna,True
+1120,D. Ndoye,Switzerland,MID,79,24000000,Nottingham Forest,True
+1121,X. Shaqiri,Switzerland,MID,78,9000000,FC Basel 1893,True
+1122,R. Bürki,Switzerland,GK,77,1800000,St. Louis CITY SC,True
+1123,B. Embolo,Switzerland,FWD,77,11000000,Stade Rennais FC,True
+1124,A. Jashari,Switzerland,MID,77,22500000,AC Milan,True
+1125,N. Elvedi,Switzerland,DEF,77,9000000,Borussia Mönchengladbach,True
+1126,P. Köhn,Switzerland,GK,77,10500000,AS Monaco,True
+1127,D. Sow,Switzerland,MID,76,7500000,Sevilla FC,True
+1128,J. Omlin,Switzerland,GK,76,4000000,Borussia Mönchengladbach,True
+1129,C. Zesiger,Switzerland,DEF,76,8500000,FC Augsburg,True
+1130,N. Okafor,Switzerland,FWD,76,10000000,Leeds United,True
+1131,Y. Mvogo,Switzerland,GK,76,4000000,FC Lorient,True
+1132,F. Ugrinić,Switzerland,MID,75,7500000,Valencia CF,True
+1133,R. Vargas,Switzerland,MID,75,6000000,Sevilla FC,True
+1134,J. Lotomba,Switzerland,DEF,75,6500000,Feyenoord,True
+1135,Z. Amdouni,Switzerland,FWD,75,9000000,Burnley,True
+1136,U. Garcia,Switzerland,DEF,75,4900000,Olympique de Marseille,True
+1137,M. Muheim,Switzerland,DEF,75,6000000,Hamburger SV,True
+1138,V. Sierro,Switzerland,MID,75,5500000,Al Shabab,True
+1139,R. Steffen,Switzerland,FWD,75,3500000,FC Lugano,False
+1140,R. Rodríguez,Switzerland,DEF,74,2900000,Real Betis Balompié,False
+1141,M. Hitz,Switzerland,GK,74,475000,FC Basel 1893,False
+1142,S. Sohm,Switzerland,MID,74,6500000,Fiorentina,False
+1143,E. Skhiri,Tunisia,MID,80,17500000,Eintracht Frankfurt,True
+1144,A. Abdi,Tunisia,DEF,76,5500000,OGC Nice,True
+1145,Hannibal,Tunisia,MID,74,9500000,Burnley,True
+1146,M. Talbi,Tunisia,DEF,73,3500000,FC Lorient,True
+1147,I. Gharbi,Tunisia,MID,73,7000000,FC Augsburg,True
+1148,A. Layouni,Tunisia,FWD,72,1900000,BK Häcken,True
+1149,E. Saad,Tunisia,FWD,72,2900000,FC Augsburg,True
+1150,E. Achouri,Tunisia,MID,72,2800000,FC København,True
+1151,Y. Valery,Tunisia,DEF,71,2300000,Sheffield Wednesday,True
+1152,S. Khaoui,Tunisia,MID,70,1500000,Red Star FC,True
+1153,M. Ben Ouanes,Tunisia,DEF,69,1200000,Kasımpaşa SK,True
+1154,S. Tounekti,Tunisia,MID,69,2800000,Celtic,True
+1155,D. Bronn,Tunisia,DEF,68,1000000,Servette FC,True
+1156,I. El Mizouni,Tunisia,MID,68,1700000,Leyton Orient,True
+1157,S. Ltaief,Tunisia,MID,68,1600000,Sparta Rotterdam,True
+1158,H. Rafia,Tunisia,MID,68,1600000,Lecce,True
+1159,M. Mahmoud,Tunisia,MID,67,1900000,FC Lugano,True
+1160,A. Ghram,Tunisia,DEF,67,2100000,Shakhtar Donetsk,True
+1161,A. Slimane,Tunisia,MID,67,1500000,Norwich City,True
+1162,A. Cherni,Tunisia,DEF,66,1300000,Göztepe SK,True
+1163,R. Kaib,Tunisia,DEF,65,650000,Halmstads BK,True
+1164,M. Dräger,Tunisia,DEF,65,625000,Eintracht Braunschweig,True
+1165,C. Labidi,Tunisia,MID,65,1100000,CD Nacional,True
+1166,L. Ben Farhat,Tunisia,FWD,64,1500000,Karlsruher SC,True
+1167,M. Neffati,Tunisia,DEF,63,1000000,IFK Norrköping,True
+1168,A. Gröller,Tunisia,DEF,61,750000,SK Rapid,True
+1169,A. Bettaieb,Tunisia,FWD,61,325000,FC Argeș,False
+1170,M. Nourani,Tunisia,MID,60,400000,CD Nacional,False
+1171,A. Arous,Tunisia,DEF,59,425000,Kasımpaşa SK,False
+1172,W. Debbiche,Tunisia,MID,57,375000,FC Annecy,False
+1173,H. Çalhanoğlu,Turkey,MID,86,47500000,Inter,True
+1174,O. Kökçü,Turkey,MID,82,43500000,Beşiktaş JK,True
+1175,A. Güler,Turkey,MID,81,56500000,Real Madrid,True
+1176,K. Aktürkoğlu,Turkey,FWD,80,25000000,Fenerbahçe SK,True
+1177,U. Çakır,Turkey,GK,80,17500000,Galatasaray SK,True
+1178,A. Bardakcı,Turkey,DEF,80,17500000,Galatasaray SK,True
+1179,B. Yılmaz,Turkey,MID,80,28000000,Galatasaray SK,True
+1180,F. Kadıoğlu,Turkey,DEF,79,20000000,Brighton & Hove Albion,True
+1181,K. Yıldız,Turkey,MID,79,38500000,Juventus,True
+1182,Y. Akgün,Turkey,MID,78,19000000,Galatasaray SK,True
+1183,M. Günok,Turkey,GK,78,1600000,Beşiktaş JK,True
+1184,İ. Kahveci,Turkey,FWD,78,14000000,Fenerbahçe SK,True
+1185,M. Demiral,Turkey,DEF,78,16000000,Al Ahli SFC,True
+1186,B. Özer,Turkey,GK,77,11000000,Lille OSC,True
+1187,O. Aydın,Turkey,FWD,77,14500000,Fenerbahçe SK,True
+1188,E. Ünal,Turkey,FWD,77,11000000,AFC Bournemouth,True
+1189,Ç. Söyüncü,Turkey,DEF,77,9500000,Fenerbahçe SK,True
+1190,İ. Yüksek,Turkey,MID,77,11500000,Fenerbahçe SK,True
+1191,K. Ayhan,Turkey,DEF,76,6500000,Galatasaray SK,True
+1192,Z. Çelik,Turkey,DEF,76,7000000,Roma,True
+1193,O. Yokuşlu,Turkey,MID,76,5000000,Trabzonspor,True
+1194,C. Ünder,Turkey,FWD,76,8000000,Beşiktaş JK,True
+1195,A. Karazor,Turkey,MID,76,6500000,VfB Stuttgart,True
+1196,A. Bayındır,Turkey,GK,75,5000000,Manchester United,True
+1197,İ. Eğribayat,Turkey,GK,75,6000000,Fenerbahçe SK,True
+1198,E. Elmalı,Turkey,DEF,75,8000000,Galatasaray SK,True
+1199,Y. Yazıcı,Turkey,MID,75,5500000,Olympiacos FC,False
+1200,G. Güvenç,Turkey,GK,75,1800000,Galatasaray SK,False
+1201,S. Özcan,Turkey,MID,75,6000000,Borussia Dortmund,False
+1202,Y. Sarı,Turkey,MID,75,6500000,Medipol Başakşehir FK,False
+1203,C. Pulisic,USA,FWD,84,46000000,AC Milan,True
+1204,M. Tillman,USA,MID,82,46000000,Bayer 04 Leverkusen,True
+1205,A. Robinson,USA,DEF,82,29500000,Fulham FC,True
+1206,Johnny Cardoso,USA,MID,81,37500000,Atlético Madrid,True
+1207,S. Dest,USA,DEF,79,23500000,PSV,True
+1208,C. Carter-Vickers,USA,DEF,79,20000000,Celtic,True
+1209,T. Adams,USA,MID,79,19500000,AFC Bournemouth,True
+1210,W. McKennie,USA,MID,78,16500000,Juventus,True
+1211,C. Richards,USA,DEF,77,12500000,Crystal Palace,True
+1212,T. Weah,USA,MID,77,12500000,Olympique de Marseille,True
+1213,F. Balogun,USA,FWD,77,16000000,AS Monaco,True
+1214,A. Zendejas,USA,MID,76,0,nan,True
+1215,R. Pepi,USA,FWD,76,17000000,PSV,True
+1216,D. Nagbe,USA,MID,75,2600000,Columbus Crew,True
+1217,G. Reyna,USA,MID,75,9000000,Borussia Mönchengladbach,True
+1218,B. White,USA,FWD,75,5500000,Vancouver Whitecaps FC,True
+1219,W. Zimmerman,USA,DEF,75,3600000,Nashville SC,True
+1220,J. Sargent,USA,FWD,75,7500000,Norwich City,True
+1221,P. Aaronson,USA,MID,75,11500000,Colorado Rapids,True
+1222,D. Mihailovic,USA,MID,75,7500000,Toronto FC,True
+1223,T. Tessmann,USA,MID,75,8000000,Olympique Lyonnais,True
+1224,Y. Musah,USA,MID,74,9500000,Atalanta,True
+1225,A. Trusty,USA,DEF,74,4900000,Celtic,True
+1226,M. McKenzie,USA,DEF,74,5500000,Toulouse FC,True
+1227,G. Busio,USA,MID,74,8500000,Venezia,True
+1228,B. Aaronson,USA,MID,74,6000000,Leeds United,True
+1229,M. Turner,USA,GK,74,2200000,New England Revolution,False
+1230,J. Scally,USA,DEF,74,5500000,Borussia Mönchengladbach,False
+1231,C. Roldan,USA,MID,74,3500000,Seattle Sounders FC,False
+1232,B. Reynolds,USA,DEF,73,6000000,KVC Westerlo,False
+1233,F. Valverde,Uruguay,MID,89,120500000,Real Madrid,True
+1234,R. Araujo,Uruguay,DEF,83,42000000,FC Barcelona,True
+1235,L. Torreira,Uruguay,MID,83,31000000,Galatasaray SK,True
+1236,J. Giménez,Uruguay,DEF,83,30000000,Atlético Madrid,True
+1237,M. Arambarri,Uruguay,MID,80,20500000,Getafe CF,True
+1238,R. Bentancur,Uruguay,MID,80,20500000,Tottenham Hotspur,True
+1239,L. Suárez,Uruguay,FWD,79,6000000,Inter Miami,True
+1240,D. Núñez,Uruguay,FWD,79,23000000,Al Hilal,True
+1241,R. Zalazar,Uruguay,MID,79,23000000,Sporting Clube de Braga,True
+1242,S. Coates,Uruguay,DEF,79,5500000,Club Nacional de Football,True
+1243,F. Muslera,Uruguay,GK,79,1900000,Estudiantes de La Plata,True
+1244,M. Ugarte,Uruguay,MID,79,23000000,Manchester United,True
+1245,L. Fernández,Uruguay,MID,78,18500000,Peñarol,True
+1246,M. Olivera,Uruguay,DEF,78,13500000,Napoli,True
+1247,M. Vecino,Uruguay,MID,77,6500000,Lazio,True
+1248,M. Araújo,Uruguay,MID,77,14000000,Sporting CP,True
+1249,C. Stuani,Uruguay,FWD,77,3600000,Girona FC,True
+1250,S. Bueno,Uruguay,DEF,76,8500000,Wolverhampton Wanderers,True
+1251,J. Rodríguez,Uruguay,MID,76,6000000,Portland Timbers,True
+1252,N. López,Uruguay,FWD,76,6500000,Club Nacional de Football,True
+1253,M. Merentiel,Uruguay,FWD,76,7500000,Boca Juniors,True
+1254,E. Cavani,Uruguay,FWD,76,2600000,Boca Juniors,True
+1255,N. Nández,Uruguay,MID,76,7500000,Al Qadsiah FC,True
+1256,G. Álvarez,Uruguay,DEF,75,10000000,Al Qadsiah FC,True
+1257,L. Cabrera,Uruguay,DEF,75,1800000,RCD Espanyol,True
+1258,D. Rossi,Uruguay,MID,75,6500000,Columbus Crew,True
+1259,F. Israel,Uruguay,GK,75,6500000,Torino,False
+1260,G. Martirena,Uruguay,DEF,75,6500000,Racing Club,False
+1261,M. Cauteruccio,Uruguay,FWD,75,1900000,Bolívar,False
+1262,S. Rodríguez,Uruguay,MID,75,4400000,Universidad de Chile,False
+1263,A. Khusanov,Uzbekistan,DEF,77,22000000,Manchester City,True
+1264,E. Shomurodov,Uzbekistan,FWD,74,4099999,Medipol Başakşehir FK,True
+1265,K. Alikulov,Uzbekistan,DEF,68,1500000,Çaykur Rizespor,True
+1266,A. Fayzullaev,Uzbekistan,MID,65,1800000,Medipol Başakşehir FK,True
+1267,M. Urinboev,Uzbekistan,FWD,63,1100000,Royal Antwerp FC,True

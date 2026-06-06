@@ -5,13 +5,15 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useState,
   type ReactNode,
 } from "react";
 import {
   GROUP_LETTERS,
-  TEAMS,
   VENUES,
+  applyStrength as applyStrengthData,
   getAllGroupForecasts,
+  getTitleRace,
   predictMatch,
   teamByName,
 } from "./data";
@@ -19,6 +21,7 @@ import { triggerKick } from "./KickFx";
 import type {
   GroupForecast,
   GroupStanding,
+  PoolPlayer,
   RawTeam,
   Stage,
 } from "./types";
@@ -27,6 +30,9 @@ import type {
 export interface PicksState {
   groupOrder: Record<string, string[]>; // group letter -> 4 team names (pos1..pos4)
   knockoutPicks: Record<string, "home" | "away">; // matchId -> side
+  bias: Record<string, number>; // team -> bias level 1..5
+  squads: Record<string, PoolPlayer[]>; // team -> custom selected players
+  nonce: number; // bumped after a strength recompute to force re-derive
   stage: Stage;
   completed: Record<Stage, boolean>;
 }
@@ -36,6 +42,9 @@ type Action =
   | { type: "SWAP_GROUP"; group: string; from: number; to: number }
   | { type: "SET_KO_WINNER"; matchId: string; side: "home" | "away" }
   | { type: "CLEAR_KO"; matchIds: string[] }
+  | { type: "SET_BIAS"; team: string; level: number }
+  | { type: "SET_SQUAD"; team: string; players: PoolPlayer[] }
+  | { type: "BUMP" }
   | { type: "GOTO_STAGE"; stage: Stage }
   | { type: "MARK_COMPLETE"; stage: Stage }
   | { type: "RESET" }
@@ -62,6 +71,9 @@ function defaultState(): PicksState {
   return {
     groupOrder,
     knockoutPicks: {},
+    bias: {},
+    squads: {},
+    nonce: 0,
     stage: "intro",
     completed: {
       intro: false,
@@ -119,6 +131,20 @@ function reducer(state: PicksState, action: Action): PicksState {
       action.matchIds.forEach((id) => delete next[id]);
       return { ...state, knockoutPicks: next };
     }
+    case "SET_BIAS": {
+      const bias = { ...state.bias };
+      if (action.level <= 0) delete bias[action.team];
+      else bias[action.team] = action.level;
+      return { ...state, bias };
+    }
+    case "SET_SQUAD": {
+      const squads = { ...state.squads };
+      if (!action.players.length) delete squads[action.team];
+      else squads[action.team] = action.players;
+      return { ...state, squads };
+    }
+    case "BUMP":
+      return { ...state, nonce: state.nonce + 1, knockoutPicks: {} };
     case "GOTO_STAGE":
       return { ...state, stage: action.stage };
     case "MARK_COMPLETE":
@@ -412,9 +438,13 @@ export function deriveBracket(state: PicksState): DerivedBracket {
 interface Ctx {
   state: PicksState;
   bracket: DerivedBracket;
+  applying: boolean;
   setGroupOrder: (group: string, teams: string[]) => void;
   swapGroup: (group: string, from: number, to: number) => void;
   setKoWinner: (matchId: string, side: "home" | "away") => void;
+  setBias: (team: string, level: number) => void;
+  setSquad: (team: string, players: PoolPlayer[]) => void;
+  applyStrength: () => Promise<void>;
   gotoStage: (s: Stage) => void;
   markComplete: (s: Stage) => void;
   resetPicks: () => void;
@@ -425,19 +455,35 @@ const PicksCtx = createContext<Ctx | null>(null);
 
 export function PicksProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, defaultState);
+  const [applying, setApplying] = useState(false);
 
   // Hydrate once
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as PicksState;
-        // sanity: every group must have 4 team names that exist
-        const ok = Object.entries(parsed.groupOrder).every(
-          ([, names]) =>
-            names.length === 4 && names.every((n) => !!teamByName(n)),
-        );
-        if (ok) dispatch({ type: "HYDRATE", state: parsed });
+        const parsed = JSON.parse(raw) as Partial<PicksState>;
+        // sanity: every group must have 4 team names that exist in the real field
+        const groupOrder = parsed.groupOrder ?? {};
+        const ok =
+          Object.keys(groupOrder).length === GROUP_LETTERS.length &&
+          Object.entries(groupOrder).every(
+            ([, names]) =>
+              names.length === 4 && names.every((n) => !!teamByName(n)),
+          );
+        if (ok) {
+          const base = defaultState();
+          dispatch({
+            type: "HYDRATE",
+            state: {
+              ...base,
+              ...parsed,
+              bias: parsed.bias ?? {},
+              squads: parsed.squads ?? {},
+              nonce: parsed.nonce ?? 0,
+            } as PicksState,
+          });
+        }
       }
     } catch {
       /* ignore */
@@ -502,12 +548,47 @@ export function PicksProvider({ children }: { children: ReactNode }) {
     setTimeout(triggerKick, 420);
   }, []);
 
+  const setBias = useCallback(
+    (team: string, level: number) => dispatch({ type: "SET_BIAS", team, level }),
+    [],
+  );
+  const setSquad = useCallback(
+    (team: string, players: PoolPlayer[]) =>
+      dispatch({ type: "SET_SQUAD", team, players }),
+    [],
+  );
+  const applyStrength = useCallback(async () => {
+    setApplying(true);
+    try {
+      const squadsPayload: Record<string, unknown> = {};
+      for (const [team, players] of Object.entries(state.squads)) {
+        squadsPayload[team] = {
+          mode: "custom",
+          selected_players: players,
+          autofill_rest: true,
+        };
+      }
+      await applyStrengthData({
+        team_bias: state.bias,
+        squads: squadsPayload,
+      });
+      dispatch({ type: "BUMP" });
+      triggerKick();
+    } finally {
+      setApplying(false);
+    }
+  }, [state.bias, state.squads]);
+
   const value: Ctx = {
     state,
     bracket,
+    applying,
     setGroupOrder,
     swapGroup,
     setKoWinner,
+    setBias,
+    setSquad,
+    applyStrength,
     gotoStage,
     markComplete,
     resetPicks,
@@ -522,16 +603,17 @@ export function usePicks() {
   return ctx;
 }
 
-// Convenience: champion probability from ELO softmax over all teams
+// Champion probabilities from the real model's title race (favourites board).
 export function teamChampionProbabilities(): {
   team: RawTeam;
   prob: number;
 }[] {
-  const elos = TEAMS.map((t) => t.elo);
-  const max = Math.max(...elos);
-  const exps = elos.map((e) => Math.exp((e - max) / 60));
-  const sum = exps.reduce((a, b) => a + b, 0);
-  return TEAMS.map((t, i) => ({ team: t, prob: exps[i] / sum })).sort(
-    (a, b) => b.prob - a.prob,
-  );
+  return getTitleRace()
+    .map((r) => {
+      const team =
+        teamByName(r.team) ??
+        ({ name: r.team, iso: r.iso, elo: 0, group: "" } as RawTeam);
+      return { team, prob: r.prob };
+    })
+    .sort((a, b) => b.prob - a.prob);
 }

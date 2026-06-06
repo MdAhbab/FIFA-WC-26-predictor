@@ -6,6 +6,7 @@ import { useSEO } from "../lib/useSEO";
 import { getMLBracket, teamChampionProbabilities } from "../lib/PicksContext";
 import { TeamSticker } from "../components/TeamSticker";
 import { AdSlot } from "../components/AdSlot";
+import { FanVote } from "../components/FanVote";
 
 export default function Home() {
   useSEO({
@@ -152,6 +153,11 @@ export default function Home() {
       </section>
 
       <AdSlot variant="leaderboard" />
+
+      {/* Fan vote — pick 2 teams to win, see everyone's calls */}
+      <section className="mt-4">
+        <FanVote />
+      </section>
 
       {/* Title race teaser */}
       <section className="mt-4 rounded-[14px] border-2 border-foreground/15 bg-card p-5 sm:p-6">

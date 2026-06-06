@@ -5,11 +5,15 @@ import { useSEO } from "../lib/useSEO";
 import { usePicks } from "../lib/PicksContext";
 import type { Stage } from "../lib/types";
 import { GROUP_LETTERS } from "../lib/data";
+import { useState } from "react";
 import { GroupRanker } from "../components/GroupRanker";
 import { MatchPicker } from "../components/MatchPicker";
 import { StageStepper } from "../components/StageStepper";
 import { TeamSticker } from "../components/TeamSticker";
 import { AdSlot } from "../components/AdSlot";
+import { StrengthPanel } from "../components/StrengthPanel";
+import { useVotes } from "../lib/VotesContext";
+import { Check } from "lucide-react";
 
 const NEXT_STAGE: Record<Stage, Stage> = {
   intro: "groups",
@@ -70,6 +74,7 @@ function GroupsStage() {
         title="Rank the 12 groups"
         body="The ML has already ranked each pool. Reorder with the arrows when you disagree — top 2 advance; the 8 strongest 3rd-placers join them."
       />
+      <StrengthPanel />
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {GROUP_LETTERS.map((g, i) => (
           <div key={g}>
@@ -216,6 +221,8 @@ function ResultsStage() {
         )}
       </div>
 
+      <ResultsVote />
+
       <AdSlot variant="leaderboard" />
 
       {/* Your bracket trail */}
@@ -239,6 +246,70 @@ function ResultsStage() {
           <RotateCcw className="size-4" /> Start over
         </button>
       </div>
+    </section>
+  );
+}
+
+function ResultsVote() {
+  const { bracket, state } = usePicks();
+  const { submit } = useVotes();
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState("");
+
+  const fin = bracket.final;
+  const champ = bracket.champion;
+  if (!fin || !champ) return null;
+  const t1 = fin.home.name;
+  const t2 = fin.away.name;
+
+  async function go() {
+    setBusy(true);
+    setErr("");
+    try {
+      await submit(t1, t2, champ!.name, {
+        groupOrder: state.groupOrder,
+        knockoutPicks: state.knockoutPicks,
+        bias: state.bias,
+        champion: champ!.name,
+      });
+      setDone(true);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not submit your vote.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-[14px] border-2 border-foreground bg-card p-5 text-center">
+      <h2 className="display tracking-wide">Lock your call into the Fan Vote</h2>
+      <p className="text-sm text-muted-foreground mt-1 mb-3">
+        Your finalists <strong>{t1}</strong> and <strong>{t2}</strong> — add them to the people's
+        bracket and see how the crowd is calling it.
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={go}
+          disabled={busy || done}
+          className="inline-flex items-center gap-2 rounded-md bg-foreground text-background display uppercase tracking-wider px-4 py-2 disabled:opacity-50 hover:enabled:translate-y-[-2px] hover:enabled:shadow-[3px_5px_0_var(--stamp-red)] transition-all"
+        >
+          {done && <Check className="size-4" />}
+          {done ? "Added to the Fan Vote" : busy ? "Saving…" : "Submit my finalists"}
+        </button>
+        <a
+          href="/"
+          className="inline-flex items-center gap-2 rounded-md border-2 border-foreground display uppercase tracking-wider px-4 py-2 hover:bg-muted transition-colors"
+        >
+          See the board
+        </a>
+      </div>
+      {err && (
+        <div className="mt-2 text-xs" style={{ color: "var(--stamp-red)" }}>
+          {err}
+        </div>
+      )}
     </section>
   );
 }
