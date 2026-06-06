@@ -1,0 +1,20 @@
+# Caddy alternative to nginx — automatic HTTPS (Let's Encrypt), zero cert management.
+#   sudo caddy run --config deploy/Caddyfile
+# or append this block to your existing /etc/caddy/Caddyfile and `sudo systemctl reload caddy`.
+
+fifaworldcup26predictor.ahbab.dev {
+    encode gzip zstd
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Long-cache the content-hashed assets.
+    @assets path /assets/*
+    header @assets Cache-Control "public, immutable, max-age=31536000"
+
+    reverse_proxy 127.0.0.1:8090
+}

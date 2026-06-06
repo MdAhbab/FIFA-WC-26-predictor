@@ -81,7 +81,8 @@ both UX and long-term RPM/quality scores.
 - [ ] Privacy Policy discloses third-party ad cookies and the opt-out link — **done** (see `/privacy`).
 - [ ] "Entertainment only — not betting advice" disclaimer present — **done** (`/disclaimer`).
 - [ ] Consent Management Platform (e.g. Google's CMP, Cookiebot, or Osano) for GDPR/UK GDPR.
-- [ ] `ads.txt` published at the domain root once AdSense/Ad Manager is approved.
+- [x] `ads.txt` shipped as a template at `frontend/public/ads.txt` (served at `/ads.txt`) — fill in
+      your real `pub-XXXX` id and uncomment the line once AdSense is approved.
 - [ ] Avoid gambling-adjacent ad categories given the football/predictions context (block in console).
 
 ## Growth path

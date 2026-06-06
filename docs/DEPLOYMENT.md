@@ -74,6 +74,13 @@ sudo systemctl daemon-reload && sudo systemctl enable --now wc26
 
 ## 2. Reverse proxy + TLS
 
+Ready-made configs live in [`deploy/`](../deploy): `nginx/fifaworldcup26predictor.conf`, `Caddyfile`,
+and `setup_ssl.sh` (one-shot nginx + certbot). Quickest path on the VM:
+
+```bash
+sudo CERTBOT_EMAIL=mkhan223869@bscse.uiu.ac.bd bash deploy/setup_ssl.sh
+```
+
 ### Caddy (simplest — automatic HTTPS)
 
 Add to your `Caddyfile`:

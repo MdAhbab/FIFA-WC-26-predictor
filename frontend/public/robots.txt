@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://fifaworldcup26predictor.ahbab.dev/sitemap.xml
