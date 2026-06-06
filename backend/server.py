@@ -59,10 +59,46 @@ DIST = HERE.parent / "frontend" / "dist"
 
 ADMIN_TOKEN = os.environ.get("WC_ADMIN_TOKEN", "dev_admin_token")
 if ADMIN_TOKEN == "dev_admin_token":
-    print("[warning] WC_ADMIN_TOKEN not set. Defaulting to 'dev_admin_token' for development.")          # set this to enable official-result writes
+    print("[warning] WC_ADMIN_TOKEN not set. Using the insecure default 'dev_admin_token' (dev only). "
+          "In production set BOTH WC_ADMIN_TOKEN and WC_ADMIN_PASSWORD to long random values — the "
+          "default admin password is public in the repo.")
 MC_BASE_SIMS = int(os.environ.get("WC_MC_SIMS", "4000"))    # full sim for the cached base payload
 MC_TUNE_SIMS = int(os.environ.get("WC_MC_SIMS_TUNE", "1500"))  # lighter sim for live tweaks
 MAX_COMPUTE = int(os.environ.get("WC_MAX_COMPUTE", "4"))    # concurrent heavy recomputes
+
+# How many reverse-proxy hops to trust in X-Forwarded-For. The edge proxy (Caddy/nginx) appends the
+# real client to the RIGHT, so we read the Nth-from-right entry; a client-spoofed left entry is ignored.
+# 0 = ignore XFF entirely (direct exposure). Default 1 = exactly one trusted proxy in front.
+TRUSTED_PROXY_HOPS = int(os.environ.get("WC_TRUSTED_PROXY_HOPS", "1"))
+
+# Admin-login brute-force guard (in-memory, per source IP).
+_LOGIN_LOCK = threading.Lock()
+_LOGIN_ATTEMPTS: "dict[str, list[float]]" = {}
+LOGIN_MAX_ATTEMPTS = int(os.environ.get("WC_LOGIN_MAX_ATTEMPTS", "8"))
+LOGIN_WINDOW_SECS = int(os.environ.get("WC_LOGIN_WINDOW_SECS", "900"))   # 15 minutes
+
+
+def _client_ip(request: "Request") -> str:
+    """Best-effort real client IP. Trusts only the right-most TRUSTED_PROXY_HOPS entries of
+    X-Forwarded-For (set by our own edge proxy), so a spoofed left-most value can't beat the limiter."""
+    if TRUSTED_PROXY_HOPS > 0:
+        xff = request.headers.get("X-Forwarded-For", "")
+        parts = [p.strip() for p in xff.split(",") if p.strip()]
+        if parts:
+            idx = min(len(parts), TRUSTED_PROXY_HOPS)
+            return parts[-idx]
+    return request.client.host if request.client else "127.0.0.1"
+
+
+def _login_rate_limited(ip: str) -> bool:
+    """Record an attempt and return True if `ip` has exceeded the login attempt budget."""
+    import time as _t
+    now = _t.time()
+    with _LOGIN_LOCK:
+        hist = [t for t in _LOGIN_ATTEMPTS.get(ip, []) if now - t < LOGIN_WINDOW_SECS]
+        hist.append(now)
+        _LOGIN_ATTEMPTS[ip] = hist
+        return len(hist) > LOGIN_MAX_ATTEMPTS
 
 # flagcdn ISO codes (gb-eng / gb-sct supported)
 ISO = {
@@ -438,11 +474,7 @@ def vote(req: VoteReq, request: Request):
     if t1 == t2:
         raise HTTPException(400, "Pick two different teams.")
     
-    ip = request.headers.get("X-Forwarded-For")
-    if ip:
-        ip = ip.split(",")[0].strip()
-    else:
-        ip = request.client.host if request.client else "127.0.0.1"
+    ip = _client_ip(request)
 
     voted, rem_secs = db.has_voted_recently(ip)
     if voted:
@@ -452,11 +484,13 @@ def vote(req: VoteReq, request: Request):
             status_code=429,
             detail=f"You have already voted in the last 12 hours from this IP. Next vote available in {h}h {m}m."
         )
-    
-    resolved_name = db.make_unique_name(req.name)
+
     ch = normalize_team_name(req.champion) if req.champion else None
-    vote_id = db.add_vote(t1, t2, ch, req.payload, name=resolved_name, ip_address=ip, referrer_vote_id=req.referrer_vote_id)
-    
+    # Resolve a collision-free name and insert atomically (no two concurrent voters get the same name).
+    vote_id, resolved_name = db.add_vote_unique(
+        t1, t2, ch, req.payload, requested_name=req.name, ip_address=ip,
+        referrer_vote_id=req.referrer_vote_id)
+
     return {
         "ok": True,
         "vote_id": vote_id,
@@ -490,7 +524,10 @@ def _require_admin(token: str):
 
 
 @app.post("/api/admin/login")
-def admin_login(req: LoginReq):
+def admin_login(req: LoginReq, request: Request):
+    ip = _client_ip(request)
+    if _login_rate_limited(ip):
+        raise HTTPException(429, "Too many login attempts. Please wait a few minutes and try again.")
     if db.verify_admin(req.username, req.password):
         # Return the server-side ADMIN_TOKEN so the client can use it for subsequent calls
         return {"ok": True, "token": ADMIN_TOKEN, "username": req.username}

@@ -74,13 +74,21 @@ def init_db():
         except sqlite3.OperationalError:
             pass
 
-        # Seed default admin if not exists
+        # Admin account. The password comes from WC_ADMIN_PASSWORD when set, so production can use a
+        # strong secret instead of the public default. If the env var is set it also ROTATES an
+        # existing account's password on startup (lets you change a leaked/default password by redeploy).
+        admin_pw = os.environ.get("WC_ADMIN_PASSWORD")
         existing = c.execute("SELECT username FROM admin_users WHERE username='ahbab'").fetchone()
         if not existing:
             salt = secrets.token_hex(16)
-            pw_hash = hashlib.sha256((salt + 'ahbab123').encode()).hexdigest()
+            pw_hash = hashlib.sha256((salt + (admin_pw or 'ahbab123')).encode()).hexdigest()
             c.execute("INSERT INTO admin_users (username, password_hash, salt) VALUES (?,?,?)",
                       ('ahbab', pw_hash, salt))
+        elif admin_pw:
+            salt = secrets.token_hex(16)
+            pw_hash = hashlib.sha256((salt + admin_pw).encode()).hexdigest()
+            c.execute("UPDATE admin_users SET password_hash=?, salt=? WHERE username='ahbab'",
+                      (pw_hash, salt))
 
 
 # ---------------------------------------------------------------------------
@@ -124,6 +132,38 @@ def add_vote(team1: str, team2: str, champion: str | None = None, payload: dict 
             (ts, team1, team2, champion, json.dumps(payload) if payload else None, name, ip_address, referrer_vote_id),
         )
         return cur.lastrowid
+
+
+def _resolve_unique_name(c, requested_name: str | None) -> str:
+    """Collision-free display name, computed against the rows visible inside the caller's open
+    connection `c`. Must be called while holding `_LOCK` so the lookup + the subsequent insert are
+    a single critical section (see add_vote_unique)."""
+    requested = (requested_name or "").strip()
+    if not requested:
+        return "Anonymous"
+    rows = c.execute("SELECT name FROM votes WHERE name IS NOT NULL").fetchall()
+    existing = {r["name"].lower() for r in rows if r["name"]}
+    if requested.lower() not in existing:
+        return requested
+    i = 1
+    while f"{requested}{i}".lower() in existing:
+        i += 1
+    return f"{requested}{i}"
+
+
+def add_vote_unique(team1: str, team2: str, champion: str | None = None, payload: dict | None = None,
+                    requested_name: str | None = None, ip_address: str | None = None,
+                    referrer_vote_id: int | None = None) -> tuple[int, str]:
+    """Resolve a collision-free name and insert the vote ATOMICALLY under a single lock, so two
+    concurrent voters can never be assigned the same name. Returns (vote_id, resolved_name)."""
+    ts = datetime.now(timezone.utc).isoformat()
+    with _LOCK, _conn() as c:
+        name = _resolve_unique_name(c, requested_name)
+        cur = c.execute(
+            "INSERT INTO votes (ts, team1, team2, champion, payload, name, ip_address, referrer_vote_id) VALUES (?,?,?,?,?,?,?,?)",
+            (ts, team1, team2, champion, json.dumps(payload) if payload else None, name, ip_address, referrer_vote_id),
+        )
+        return cur.lastrowid, name
 
 
 def vote_summary(valid_teams: set[str] | None = None, top_n: int = 12) -> dict:

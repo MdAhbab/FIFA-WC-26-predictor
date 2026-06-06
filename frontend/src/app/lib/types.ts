@@ -81,6 +81,8 @@ export interface OfficialResult {
   hg: number;
   ag: number;
   locked: boolean;
+  /** Shootout winner for a level knockout result (null for decisive / group matches). */
+  winner_team?: string | null;
 }
 
 export interface SessionInfo {

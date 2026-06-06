@@ -108,10 +108,25 @@ export function predictMatch(
   home: RawTeam,
   away: RawTeam,
   _matchId: string,
-  _opts: { allowDraw?: boolean } = {},
+  opts: { allowDraw?: boolean } = {},
 ): RawMatchResult {
+  const allowDraw = opts.allowDraw ?? true;
   const p = PAIRWISE[home.name]?.[away.name];
   if (p) {
+    // Knockouts can't end level: if the data ever returns a draw winner, resolve it to a shootout
+    // advantage for the higher-rated side and flag penalties, so the bracket always has an advancer.
+    if (!allowDraw && (p.winner as string) === "draw") {
+      const homeAdvances = home.elo >= away.elo;
+      return {
+        homeGoals: p.homeGoals,
+        awayGoals: p.awayGoals,
+        winner: homeAdvances ? "home" : "away",
+        penalties: true,
+        corners: p.corners,
+        yellows: p.yellows,
+        reds: p.reds,
+      };
+    }
     return {
       homeGoals: p.homeGoals,
       awayGoals: p.awayGoals,

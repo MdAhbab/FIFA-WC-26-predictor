@@ -92,6 +92,7 @@ _SEED: list[dict] = [
 _LOCK = Lock()
 _cache: dict = {"ts": 0.0, "items": []}          # general "recent" rail cache
 _match_cache: dict[frozenset, dict] = {}          # per-team-pair cache (live + frozen snapshots)
+_MATCH_CACHE_MAX = 256                             # bound memory: evict oldest pairs beyond this
 
 
 def _seed_items() -> list[dict]:
@@ -118,13 +119,17 @@ def _dedup(items: list[dict]) -> list[dict]:
     return out
 
 
-def _fetch_newsapi(query: str, n: int = 8) -> list[dict]:
+def _fetch_newsapi(query: str, n: int = 8, search_in: str | None = None) -> list[dict]:
     """Best-effort NewsAPI.org `everything` query. Returns [] on any error (never raises to the
-    request path), so a missing key / quota / network blip silently falls back to the seed."""
+    request path), so a missing key / quota / network blip silently falls back to the seed.
+    `search_in` (e.g. 'title,description') restricts where the query matches, for tighter relevance."""
     if not API_KEY:
         return []
-    params = urlencode({"q": query, "language": "en", "sortBy": "publishedAt",
-                        "pageSize": max(1, min(n, 20)), "apiKey": API_KEY})
+    q = {"q": query, "language": "en", "sortBy": "publishedAt",
+         "pageSize": max(1, min(n, 20)), "apiKey": API_KEY}
+    if search_in:
+        q["searchIn"] = search_in
+    params = urlencode(q)
     try:
         req = urllib.request.Request(f"{NEWSAPI_URL}?{params}",
                                      headers={"User-Agent": "wc26-predictor/1.0"})
@@ -220,9 +225,13 @@ def for_match(home: str, away: str, finalized: bool = False) -> list[dict]:
 
     # Require a World-Cup context so a team name doesn't pull in unrelated (e.g. women's/club) stories.
     query = f'("{home}" OR "{away}") AND ("World Cup" OR "World Cup 2026")'
-    live = _dedup(_fetch_newsapi(query, n=8))[:4]
+    live = _dedup(_fetch_newsapi(query, n=8, search_in="title,description"))[:4]
     items = live or _seed_for(home, away)
     with _LOCK:
+        # Bound memory: evict the oldest entries if the per-pair cache grows too large.
+        if len(_match_cache) >= _MATCH_CACHE_MAX:
+            for old_key in sorted(_match_cache, key=lambda k: _match_cache[k]["ts"])[:len(_match_cache) - _MATCH_CACHE_MAX + 1]:
+                _match_cache.pop(old_key, None)
         _match_cache[key] = {"ts": now, "items": items}
     return items
 

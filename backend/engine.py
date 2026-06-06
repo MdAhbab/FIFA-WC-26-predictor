@@ -42,7 +42,7 @@ DATASETS = _HERE / 'datasets'
 DATA = _HERE / 'data'
 # Persisted artefacts (trained model) so the VM only pays the training cost once, ever.
 CACHE_DIR = _HERE / 'model_cache'
-MODEL_VERSION = 'hgb-poisson-v4'   # bump to invalidate the on-disk model cache (v4: full compressed features)
+MODEL_VERSION = 'hgb-poisson-v5'   # v5: feature scales reconciled to the competition notebook (single source of truth)
 
 def _find(*names):
     for n in names:
@@ -88,8 +88,11 @@ GAMMA_FALLBACK = 0.90
 #   (1) tanh-compress the Elo difference so extreme mismatches saturate instead of exploding, and
 #   (2) feed Elo to the model exactly ONCE (own_elo/opp_elo/elo_diff were three views of the same
 #       signal, giving Elo ~3x the importance it deserved).
-ELO_COMPRESS_SCALE  = 300.0   # elo diff (scale ~0-600)
-FIFA_COMPRESS_SCALE = 500.0   # fifa ranking pts diff (scale ~0-1000)
+# Scales are kept identical to the competition notebook (wc2026_engine.py) so the app mirrors the
+# validated EV-optimal submission model — a single source of truth. Change them in BOTH files and bump
+# MODEL_VERSION above (the on-disk cache is keyed on it) if you ever re-tune.
+ELO_COMPRESS_SCALE  = 400.0   # elo diff compression
+FIFA_COMPRESS_SCALE = 400.0   # fifa ranking pts diff compression
 FORM_COMPRESS_SCALE = 1.5     # form pts/match diff (scale ~0-3)
 AD_COMPRESS_SCALE   = 1.0     # attack-vs-defence diff (goals, scale ~0-2)
 
@@ -1012,14 +1015,19 @@ def backtest_wc2022(mdf, state_unused=None):
     tot_model = tot_base = 0; n = 0; win_hits = 0
     for r in test.itertuples(index=False):
         if np.isnan(getattr(r, 'home_elo_pre', np.nan)): continue
+        # Features must match build_training_xy / _feat_row exactly: tanh-compressed *diffs* for
+        # elo/fifa/form/att-def, absolute own_attack & opp_defence. (Earlier this fed raw fifa/form
+        # values where the model expects compressed diffs, making the backtest meaningless.)
         feat_h = [_compress_elo_diff(r.home_elo_pre - r.away_elo_pre),
-                  r.home_fifa_points_filled, r.away_fifa_points_filled,
-                  r.home_form_points_per_match_last10, r.away_form_points_per_match_last10,
-                  r.home_avg_goals_for_last10, r.away_avg_goals_against_last10, 0, 1, 1]
+                  _compress(r.home_fifa_points_filled - r.away_fifa_points_filled, FIFA_COMPRESS_SCALE),
+                  _compress(r.home_form_points_per_match_last10 - r.away_form_points_per_match_last10, FORM_COMPRESS_SCALE),
+                  r.home_avg_goals_for_last10, r.away_avg_goals_against_last10,
+                  _compress(r.home_avg_goals_for_last10 - r.away_avg_goals_against_last10, AD_COMPRESS_SCALE), 0, 1, 1]
         feat_a = [_compress_elo_diff(r.away_elo_pre - r.home_elo_pre),
-                  r.away_fifa_points_filled, r.home_fifa_points_filled,
-                  r.away_form_points_per_match_last10, r.home_form_points_per_match_last10,
-                  r.away_avg_goals_for_last10, r.home_avg_goals_against_last10, 0, 1, 1]
+                  _compress(r.away_fifa_points_filled - r.home_fifa_points_filled, FIFA_COMPRESS_SCALE),
+                  _compress(r.away_form_points_per_match_last10 - r.home_form_points_per_match_last10, FORM_COMPRESS_SCALE),
+                  r.away_avg_goals_for_last10, r.home_avg_goals_against_last10,
+                  _compress(r.away_avg_goals_for_last10 - r.home_avg_goals_against_last10, AD_COMPRESS_SCALE), 0, 1, 1]
         lh = float(np.clip(model.predict(pd.DataFrame([feat_h], columns=FEATURES))[0], .15, 6))
         la = float(np.clip(model.predict(pd.DataFrame([feat_a], columns=FEATURES))[0], .15, 6))
         M = score_matrix(lh, la); a, b = best_scoreline(M)

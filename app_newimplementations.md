@@ -1,8 +1,13 @@
 # App Audit & New Implementations Plan
 
 _System audit of the WC2026 Predictor web app (`app/`). Findings are grouped by severity with a
-concrete location, the evidence, and a recommended fix. This is a **plan to implement later** — the
-items under "Already fixed in this pass" are done; everything else is proposed, not yet applied._
+concrete location, the evidence, and a recommended fix._
+
+> **Status (2026-06-07): ALL findings below have now been implemented and verified** (H1, H2, M1–M4,
+> L1–L4), in addition to the draws/penalties + news work. Each item is tagged **[DONE]** with what
+> shipped. This file is retained as the rationale/record. Verification: frontend `npm run build`
+> clean; backend smoke test passes; app backtest now reads 27.5 vs 21.6 pts/match (matches the
+> competition notebook after the M3 scale reconciliation).
 
 > Scope: the `app/` folder only (backend FastAPI + React frontend). The competition `notebook.ipynb`
 > and root `*.py` are out of scope here and were handled separately (kept EV-optimal).
@@ -25,6 +30,25 @@ items under "Already fixed in this pass" are done; everything else is proposed, 
   detail dialog), **auto-refresh on admin updates** (`news.invalidate()`), and **news freezes for
   finalized matches** (`for_match(..., finalized=True)` serves the last snapshot; dialog shows
   "FINAL · news frozen").
+
+---
+
+## Implementation summary (what shipped 2026-06-07)
+
+| # | Fix | Where |
+|---|-----|-------|
+| **H1** | Admin login rate-limited (8/15 min/IP); `WC_ADMIN_PASSWORD` env sets/rotates the dashboard password so prod isn't stuck with the public default; startup warning strengthened. | `server.py`, `db.py`, `.env.example` |
+| **H2** | `X-Forwarded-For` now read from the right-most trusted hop (`WC_TRUSTED_PROXY_HOPS`, default 1), defeating left-most spoofing; falls back to the TCP peer. | `server.py` `_client_ip` |
+| **M1** | Client knockout bracket honors finalised official results per competition match id (winner incl. shootout `winner_team`, goals, penalties) and cascades the real winner; falls back to prediction if the bracket diverged. | `PicksContext.tsx`, `types.ts` |
+| **M2** | App engine backtest now builds tanh-compressed-diff features (was raw) → backtest is meaningful again (27.5 vs 21.6). | `engine.py` |
+| **M3** | Engine feature scales reconciled to the notebook (ELO/FIFA 400/400); `MODEL_VERSION`→`v5` invalidates the cache. App now mirrors the validated submission model. | `engine.py` |
+| **M4** | `add_vote_unique()` resolves the collision-free name and inserts atomically under one lock — no name race. | `db.py`, `server.py` |
+| **L1** | `predictMatch` honors `allowDraw`: a draw in a knockout resolves to a shootout advancer + penalties. | `data.ts` |
+| **L2** | Per-match news cache bounded (LRU-ish, max 256 pairs). | `news.py` |
+| **L3** | Per-match news query tightened (World-Cup context + `searchIn=title,description`). | `news.py` |
+| **L4** | Match-id badges on public cards (group rows, KO cards, detail dialog); admin panel already has a Match ID field + id legend. | `Predictions.tsx`, `MatchDetailDialog.tsx`, `Admin.tsx` |
+
+_The detailed rationale for each is retained below._
 
 ---
 

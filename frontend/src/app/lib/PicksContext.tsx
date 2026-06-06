@@ -13,6 +13,7 @@ import {
   VENUES,
   applyStrength as applyStrengthData,
   getAllGroupForecasts,
+  getOfficialResults,
   getTitleRace,
   predictMatch,
   teamByName,
@@ -21,10 +22,18 @@ import { triggerKick } from "./KickFx";
 import type {
   GroupForecast,
   GroupStanding,
+  OfficialResult,
   PoolPlayer,
   RawTeam,
   Stage,
 } from "./types";
+
+// Competition match id (1-104) from the bracket's internal knockout id "K{n}"
+// (R32 73-88, R16 89-96, QF 97-100, SF 101-102, Final 104).
+function koCompetitionId(idStr: string): number {
+  const n = parseInt(idStr.replace("K", ""), 10);
+  return n === 31 ? 104 : 72 + n;
+}
 
 // ---------- State ----------
 export interface PicksState {
@@ -188,6 +197,8 @@ export interface KnockoutResult {
   userOverride: boolean;
   /** Whether this stage is unlocked / auto-predicted */
   autoPredicted: boolean;
+  /** True when this result is a finalised official (real-world) result, not a prediction. */
+  official?: boolean;
 }
 
 export interface DerivedBracket {
@@ -249,14 +260,38 @@ function makeKO(
   picks: Record<string, "home" | "away">,
   dayOffset: number,
   autoPredicted: boolean,
+  official?: Map<number, OfficialResult>,
 ): KnockoutResult {
   const r = predictMatch(home, away, matchId, { allowDraw: false });
-  const winner = r.winner as "home" | "away";
+  const mlWinner = r.winner as "home" | "away";
+
+  // A recorded real-world result overrides the prediction (only if the teams that actually reached
+  // this slot match the finalised fixture — otherwise the bracket has diverged and we predict).
+  const off = official?.get(koCompetitionId(matchId));
+  if (off && new Set([off.home, off.away]).size === 2 &&
+      ((off.home === home.name && off.away === away.name) ||
+       (off.home === away.name && off.away === home.name))) {
+    const homeGoals = off.home === home.name ? off.hg : off.ag;
+    const awayGoals = off.home === home.name ? off.ag : off.hg;
+    const winner: "home" | "away" = off.winner_team
+      ? off.winner_team === home.name ? "home" : "away"
+      : homeGoals > awayGoals ? "home" : awayGoals > homeGoals ? "away" : mlWinner;
+    return {
+      matchId, round, multiplier, home, away,
+      homeGoals, awayGoals, winner,
+      winnerTeam: winner === "home" ? home : away,
+      penalties: homeGoals === awayGoals,
+      corners: r.corners, yellows: r.yellows, reds: r.reds,
+      date: dateForKO(dayOffset), venue: venueFor(matchId),
+      userOverride: false, autoPredicted, official: true,
+    };
+  }
+
   const applied = applyUserPick(
     matchId,
     home,
     away,
-    winner,
+    mlWinner,
     r.homeGoals,
     r.awayGoals,
     autoPredicted ? undefined : picks[matchId],
@@ -284,6 +319,11 @@ function makeKO(
 
 export function deriveBracket(state: PicksState): DerivedBracket {
   const groups = getAllGroupForecasts();
+  // Finalised official results (admin-entered) keyed by competition match id, so a recorded knockout
+  // result overrides the model prediction and cascades the real winner through the bracket.
+  const official = new Map<number, OfficialResult>(
+    getOfficialResults().map((r) => [r.match_id, r] as const),
+  );
   const effectiveStandings: Record<string, GroupStanding[]> = {};
 
   for (const g of GROUP_LETTERS) {
@@ -357,6 +397,7 @@ export function deriveBracket(state: PicksState): DerivedBracket {
         state.knockoutPicks,
         i,
         !r32Unlocked,
+        official,
       ),
     );
   }
@@ -376,6 +417,7 @@ export function deriveBracket(state: PicksState): DerivedBracket {
         state.knockoutPicks,
         16 + i,
         !r16Unlocked,
+        official,
       ),
     );
   }
@@ -395,6 +437,7 @@ export function deriveBracket(state: PicksState): DerivedBracket {
         state.knockoutPicks,
         24 + i,
         !qfUnlocked,
+        official,
       ),
     );
   }
@@ -414,6 +457,7 @@ export function deriveBracket(state: PicksState): DerivedBracket {
         state.knockoutPicks,
         28 + i,
         true,
+        official,
       ),
     );
   }
@@ -429,6 +473,7 @@ export function deriveBracket(state: PicksState): DerivedBracket {
       state.knockoutPicks,
       31,
       true,
+      official,
     );
   }
 
