@@ -41,22 +41,22 @@ serves the built site and the API on one port (same origin).
 Requirements: Python 3.11+ (with the backend deps) and, for the first build, Node 18+.
 
 ```bash
-cd app
 pip install -r backend/requirements.txt
 python run.py
 ```
 Open http://127.0.0.1:8000 . `run.py` builds `frontend/dist` automatically the first time, then FastAPI
 serves the site and API together. Set `PORT=9000` to change the port; `NO_BROWSER=1` to not auto-open.
+(For the production VM use `run_onVM.py`, which binds 0.0.0.0:8090 — see Deployment below.)
 
 ## Development (live reload, two terminals)
 ```bash
 # terminal 1 - backend
-cd app/backend
+cd backend
 pip install -r requirements.txt
 uvicorn server:app --reload --port 8000
 
 # terminal 2 - frontend (Vite dev server, proxies /api to :8000)
-cd app/frontend
+cd frontend
 npm install
 npm run dev      # http://localhost:5173
 ```
@@ -80,24 +80,61 @@ to stay within AdSense policy. (Optionally set `VITE_API_BASE` if the API lives 
 ## API
 | Method | Path | Purpose |
 |---|---|---|
-| GET  | `/api/bootstrap` | teams, group forecasts, knockout pairwise matrix, title race, meta, votes |
-| POST | `/api/strength` | recompute predictions under `{team_bias, squads}` |
+| GET  | `/api/bootstrap` | teams, group forecasts, knockout pairwise matrix, **Monte-Carlo title race**, meta, votes, official results, session |
+| POST | `/api/strength` | recompute predictions under `{team_bias, squads}` (cached; lighter sim) |
 | GET  | `/api/players/{team}` | a team's selectable player pool |
+| GET  | `/api/match?home=&away=` | per-match insight: win probabilities, predicted score, head-to-head, probable XIs, related news |
+| GET  | `/api/news?n=8` | shuffled recent football-news rail (5–10 items) |
+| GET  | `/api/results` | finalised official results applied so far |
+| GET  | `/api/session` | anonymous session info (20-min idle TTL) + active-session count |
 | POST | `/api/vote` | `{team1, team2, champion?, payload?}` -> stores a vote, returns the aggregate |
 | GET  | `/api/votes` | aggregated fan vote |
-| GET  | `/api/health` | status |
+| POST | `/api/admin/result` | (token-gated) record a finalised official result -> incremental Elo + locks the fixture |
+| DELETE | `/api/admin/result/{match_id}` | (token-gated) remove a recorded result |
+| GET  | `/api/health` | status, active sessions, results applied, cache size |
 
-Interactive docs at `/docs`.
+Interactive docs at `/docs`. Admin endpoints require the `x-admin-token` header matching
+`WC_ADMIN_TOKEN` (writes are disabled until that env var is set).
 
 ---
 
+## Production deployment (Docker / GCP VM)
+For the live site (`fifaworldcup26predictor.ahbab.dev`) the app runs on its **own port (8090)** so it
+never collides with the portfolio on the same VM. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+```bash
+# Docker (frontend is built + model pre-trained inside the image)
+docker compose up -d --build      # serves 127.0.0.1:8090, reverse-proxy the domain to it
+
+# Or bare Python on the VM (no Docker)
+python run_onVM.py                # binds 0.0.0.0:8090, builds frontend if needed
+```
+
+Ad-integration strategy: [`docs/AD_STRATEGY.md`](docs/AD_STRATEGY.md).
+
+## Performance & scaling notes
+- The goal model is **trained once and persisted** (`backend/model_cache/`, joblib). Subsequent
+  restarts load it in milliseconds instead of retraining ~11k matches.
+- The base prediction payload is **computed once at startup and cached**; identical requests are
+  pure cache hits, so 20+ concurrent visitors are served from memory with no model inference.
+- Champion / finalist / semi-final probabilities come from a **Monte-Carlo tournament simulation**
+  (not an Elo softmax), which keeps the favourite's odds realistic instead of runaway-biased.
+- Heavy recomputes (custom squads/bias) are bounded by a semaphore and use a lighter simulation.
+- Tune with `WC_MC_SIMS`, `WC_MC_SIMS_TUNE`, `WC_MAX_COMPUTE` (see `backend/.env.example`).
+
+## Continual learning (live results)
+With `WC_ADMIN_TOKEN` set, POST finalised official scores to `/api/admin/result`. Each result applies
+a lightweight **incremental Elo update** to both teams (no retrain), locks the completed fixture to its
+real score, and refreshes every remaining probability.
+
 ## Refreshing predictions
-The app reads from `backend/datasets/`. To refresh with newer data, replace the files there (same column
-names) and restart - the model retrains at startup (~4s). To regenerate the static JSON used elsewhere,
-run `python ../generate_app_data.py` from the project root.
+The app reads from `backend/datasets/`. To refresh with newer data, replace the files there (same
+column names) and restart — the model retrains once and re-caches (bump `MODEL_VERSION` in `engine.py`
+to force a retrain if only the model code changed).
 
 ## Notes / limitations
 - The interactive bracket uses a sensible qualifier pairing for a smooth game; the exact official FIFA
   slot wiring is used in the competition notebook. Teams, scores and the champion are the real model output.
-- First load trains the model once (a few seconds), then responses are fast and cached.
-- `wc26.db` (votes) is created automatically; delete it to reset the fan vote.
+- `wc26.db` (votes + official results) is created automatically; delete it to reset.
+- The news rail ships with a curated WC-2026 seed; set `WC_NEWS_FEED` to an RSS/Atom URL to merge a
+  live feed on top.

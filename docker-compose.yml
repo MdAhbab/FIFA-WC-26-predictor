@@ -1,0 +1,47 @@
+# Production compose for fifaworldcup26predictor.ahbab.dev
+#
+# Runs the predictor on host port 8090 (NOT 8000 — leaves the portfolio on ahbab.dev untouched).
+# Put nginx/Caddy in front to terminate TLS for the domain and proxy to 127.0.0.1:8090.
+#
+#   docker compose up -d --build
+#
+services:
+  predictor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Optional: bake AdSense ids into the frontend bundle at build time.
+        VITE_ADSENSE_CLIENT: "${VITE_ADSENSE_CLIENT:-}"
+        VITE_AD_SLOT_LEADERBOARD: "${VITE_AD_SLOT_LEADERBOARD:-}"
+        VITE_AD_SLOT_RECTANGLE: "${VITE_AD_SLOT_RECTANGLE:-}"
+        VITE_AD_SLOT_IN_ARTICLE: "${VITE_AD_SLOT_IN_ARTICLE:-}"
+    image: wc26-predictor:latest
+    container_name: wc26-predictor
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:8090"   # bind to localhost; the reverse proxy exposes it publicly
+    environment:
+      PORT: "8090"
+      # Persist SQLite (votes + official results) on the mounted volume.
+      WC_DB_PATH: "/app/backend/data-vol/wc26.db"
+      # Continual-learning admin writes are disabled unless this token is set.
+      WC_ADMIN_TOKEN: "${WC_ADMIN_TOKEN:-}"
+      # Monte-Carlo + concurrency tuning (defaults are tuned for a small VM).
+      WC_MC_SIMS: "${WC_MC_SIMS:-4000}"
+      WC_MC_SIMS_TUNE: "${WC_MC_SIMS_TUNE:-1500}"
+      WC_MAX_COMPUTE: "${WC_MAX_COMPUTE:-4}"
+      # Optional live news feed (RSS/Atom). Leave unset to use the curated seed.
+      WC_NEWS_FEED: "${WC_NEWS_FEED:-}"
+    volumes:
+      # Persist the fan-vote / official-results SQLite DB across redeploys.
+      - wc26-data:/app/backend/data-vol
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8090/api/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  wc26-data:
