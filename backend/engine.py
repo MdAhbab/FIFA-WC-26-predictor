@@ -42,7 +42,7 @@ DATASETS = _HERE / 'datasets'
 DATA = _HERE / 'data'
 # Persisted artefacts (trained model) so the VM only pays the training cost once, ever.
 CACHE_DIR = _HERE / 'model_cache'
-MODEL_VERSION = 'hgb-poisson-v2'   # bump to invalidate the on-disk model cache
+MODEL_VERSION = 'hgb-poisson-v3'   # bump to invalidate the on-disk model cache (v3: anti-overfit features)
 
 def _find(*names):
     for n in names:
@@ -81,7 +81,22 @@ MAXG = 10
 MU_FALLBACK = 1.32
 GAMMA_FALLBACK = 0.90
 
-FEATURES = ['own_elo', 'opp_elo', 'elo_diff', 'own_fifa', 'opp_fifa',
+# --- Overfitting controls (see docs / overfitting analysis) -----------------
+# The latest dataset has inflated top-team Elos (Spain ~2224), so raw fixtures like
+# Spain vs Haiti sit *above the 99th percentile* of training elo_diff — the model had never seen a
+# legitimate match that lopsided and extrapolated to blow-out goal rates. We tame this two ways:
+#   (1) tanh-compress the Elo difference so extreme mismatches saturate instead of exploding, and
+#   (2) feed Elo to the model exactly ONCE (own_elo/opp_elo/elo_diff were three views of the same
+#       signal, giving Elo ~3x the importance it deserved).
+ELO_COMPRESS_SCALE = 300.0
+
+
+def _compress_elo_diff(diff):
+    """Map an Elo difference to (-1, 1) via tanh: keeps direction & ordering, caps extremes."""
+    return float(np.tanh(diff / ELO_COMPRESS_SCALE))
+
+
+FEATURES = ['elo_diff_c', 'own_fifa', 'opp_fifa',
             'own_form', 'opp_form', 'own_attack', 'opp_defence',
             'is_home', 'neutral', 'is_world_cup']
 
@@ -171,7 +186,7 @@ def build_training_xy(df):
             oe = getattr(r, f'{own}_elo_pre', np.nan); pe = getattr(r, f'{opp}_elo_pre', np.nan)
             if np.isnan(oe) or np.isnan(pe):
                 continue
-            feat = [oe, pe, oe - pe,
+            feat = [_compress_elo_diff(oe - pe),
                     getattr(r, f'{own}_fifa_points_filled', np.nan),
                     getattr(r, f'{opp}_fifa_points_filled', np.nan),
                     getattr(r, f'{own}_form_points_per_match_last10', np.nan),
@@ -210,9 +225,11 @@ def train_goal_model(df, use_cache: bool = True):
         except Exception:
             pass  # corrupt/incompatible cache -> retrain below
     X, y = build_training_xy(df)
-    model = HistGradientBoostingRegressor(loss='poisson', max_depth=4, learning_rate=0.06,
-                                          max_iter=350, min_samples_leaf=40,
-                                          l2_regularization=1.0, random_state=42)
+    # Regularised vs the original (depth 4 / leaf 40 / l2 1.0): shallower trees, bigger leaves and a
+    # stronger weight penalty stop the model memorising the precise Elo->goals curve at extreme Elos.
+    model = HistGradientBoostingRegressor(loss='poisson', max_depth=3, learning_rate=0.05,
+                                          max_iter=400, min_samples_leaf=60,
+                                          l2_regularization=2.0, random_state=42)
     model.fit(X, y)
     if use_cache:
         try:
@@ -233,7 +250,7 @@ def fixture_context(home, away):
 
 
 def _feat_row(own, opp, own_elo, opp_elo, state, is_home, neutral):
-    return [own_elo, opp_elo, own_elo - opp_elo,
+    return [_compress_elo_diff(own_elo - opp_elo),
             state[own]['fifa'], state[opp]['fifa'],
             state[own]['form'], state[opp]['form'],
             state[own]['gf'], state[opp]['ga'],
@@ -627,6 +644,18 @@ def build_lambda_matrix(teams, eff, state, model):
     return {h: {a: (G[(h, a)], G[(a, h)]) for a in teams if a != h} for h in teams}
 
 
+def build_prob_matrix(lam):
+    """Dixon-Coles win/draw/loss probabilities for every ordered pair (one pass over `lam`).
+
+    Used by the simulator so knockout ties resolve from the model's *actual* outcome probabilities
+    (which correct the low-score correlation) rather than raw independent Poisson draws."""
+    P = {h: {} for h in lam}
+    for h in lam:
+        for a, (lh, la) in lam[h].items():
+            P[h][a] = outcome_probs(score_matrix(lh, la))
+    return P
+
+
 def _rslot_sim(slot, mid, winners, runners, third_assign, win_of, los_of):
     s = str(slot).strip()
     if s.startswith('Winner Group '): return winners[s.split()[-1]]
@@ -637,8 +666,10 @@ def _rslot_sim(slot, mid, winners, runners, third_assign, win_of, los_of):
     return s
 
 
-def simulate_tournament(lam, groups, knock_df, third_slots, rng, knock_rows=None):
-    """Play one full tournament, sampling scorelines from Poisson(λ). Returns win_of/round sets."""
+def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=None):
+    """Play one full tournament. Group games sample Poisson(λ) scorelines (so goal difference is
+    realistic for tie-breaks); knockout ties resolve from Dixon-Coles win/draw/loss probabilities,
+    with draws settled by a near coin-flip shootout (real shootouts are ~50/50). Returns win_of."""
     winners, runners, thirds, third_metric = {}, {}, {}, {}
     for g, gteams in groups.items():
         pts = {t: 0 for t in gteams}; gd = {t: 0 for t in gteams}; gf = {t: 0 for t in gteams}
@@ -661,18 +692,16 @@ def simulate_tournament(lam, groups, knock_df, third_slots, rng, knock_rows=None
 
     rows = knock_rows if knock_rows is not None else list(knock_df.itertuples(index=False))
     win_of, los_of = {}, {}
-    reach = {}  # team -> furthest round code
     for r in rows:
         mid = int(r.match_id)
         home = _rslot_sim(r.slot_home, mid, winners, runners, third_assign, win_of, los_of)
         away = (third_assign[mid] if 'Best 3rd' in str(r.slot_away)
                 else _rslot_sim(r.slot_away, mid, winners, runners, third_assign, win_of, los_of))
-        lh, la = lam[home][away]
-        hg, ag = int(rng.poisson(lh)), int(rng.poisson(la))
-        if hg > ag: w, l = home, away
-        elif ag > hg: w, l = away, home
-        else:  # penalties: weight by attacking strength
-            w, l = (home, away) if rng.random() < lh / (lh + la) else (away, home)
+        ph, pdr, pa = P[home][away]
+        # draws go to a shootout with only a whisper of a skill edge (shootouts are ~coin-flips)
+        pen_home = 0.5 + 0.1 * (ph - pa)
+        adv_home = ph + pdr * pen_home
+        w, l = (home, away) if rng.random() < adv_home else (away, home)
         win_of[mid], los_of[mid] = w, l
     return win_of, winners, runners
 
@@ -685,12 +714,13 @@ def champion_probabilities(lam, groups, knock_df, n_sims=4000, seed=12345):
     """Run the Monte-Carlo and aggregate per-team round-reach + title probabilities."""
     third_slots = _third_slots_of(knock_df)
     knock_rows = list(knock_df.itertuples(index=False))
+    P = build_prob_matrix(lam)
     rng = np.random.default_rng(seed)
     teams = list(lam.keys())
     champ = {t: 0 for t in teams}; final = {t: 0 for t in teams}
     semi = {t: 0 for t in teams}; qf = {t: 0 for t in teams}; r16 = {t: 0 for t in teams}
     for _ in range(n_sims):
-        win_of, _w, _r = simulate_tournament(lam, groups, knock_df, third_slots, rng, knock_rows)
+        win_of, _w, _r = simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows)
         for m in _R32:
             if m in win_of: r16[win_of[m]] += 1
         for m in _R16:
@@ -858,11 +888,11 @@ def backtest_wc2022(mdf, state_unused=None):
     tot_model = tot_base = 0; n = 0; win_hits = 0
     for r in test.itertuples(index=False):
         if np.isnan(getattr(r, 'home_elo_pre', np.nan)): continue
-        feat_h = [r.home_elo_pre, r.away_elo_pre, r.home_elo_pre - r.away_elo_pre,
+        feat_h = [_compress_elo_diff(r.home_elo_pre - r.away_elo_pre),
                   r.home_fifa_points_filled, r.away_fifa_points_filled,
                   r.home_form_points_per_match_last10, r.away_form_points_per_match_last10,
                   r.home_avg_goals_for_last10, r.away_avg_goals_against_last10, 0, 1, 1]
-        feat_a = [r.away_elo_pre, r.home_elo_pre, r.away_elo_pre - r.home_elo_pre,
+        feat_a = [_compress_elo_diff(r.away_elo_pre - r.home_elo_pre),
                   r.away_fifa_points_filled, r.home_fifa_points_filled,
                   r.away_form_points_per_match_last10, r.home_form_points_per_match_last10,
                   r.away_avg_goals_for_last10, r.home_avg_goals_against_last10, 0, 1, 1]
