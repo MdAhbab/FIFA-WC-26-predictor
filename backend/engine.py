@@ -18,7 +18,7 @@ Pipeline
 Outputs are in exact competition format (predicted_home_goals, …, winning_team / match_winner …).
 """
 from __future__ import annotations
-import json, re, warnings
+import json, re, warnings, hashlib
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -28,6 +28,7 @@ warnings.filterwarnings('ignore')
 
 try:
     from sklearn.ensemble import HistGradientBoostingRegressor
+    import joblib
     _SKLEARN = True
 except Exception:
     _SKLEARN = False
@@ -39,6 +40,9 @@ RNG = np.random.default_rng(42)
 _HERE = Path(__file__).resolve().parent
 DATASETS = _HERE / 'datasets'
 DATA = _HERE / 'data'
+# Persisted artefacts (trained model) so the VM only pays the training cost once, ever.
+CACHE_DIR = _HERE / 'model_cache'
+MODEL_VERSION = 'hgb-poisson-v2'   # bump to invalidate the on-disk model cache
 
 def _find(*names):
     for n in names:
@@ -182,15 +186,42 @@ def build_training_xy(df):
     return pd.DataFrame(rows, columns=FEATURES), np.asarray(y, dtype=float)
 
 
-def train_goal_model(df):
-    """Fit the Poisson gradient-boosted goal model. Returns the fitted model (or None)."""
+def _dataset_signature(df) -> str:
+    """Cheap fingerprint of the training data so a stale on-disk model is detected & retrained."""
+    n = len(df)
+    last = str(df['date'].max()) if 'date' in df and n else ''
+    return hashlib.md5(f'{MODEL_VERSION}|{n}|{last}'.encode()).hexdigest()[:16]
+
+
+def train_goal_model(df, use_cache: bool = True):
+    """Fit (or load) the Poisson gradient-boosted goal model.
+
+    The fitted model is persisted to disk with joblib and keyed on a dataset fingerprint, so the
+    resource-constrained VM only ever trains once per dataset version — every subsequent process
+    start (and every worker/restart) loads the cached estimator in milliseconds instead of
+    re-fitting on ~11k matches. Returns the fitted model (or None when sklearn/data is absent)."""
     if df is None or not _SKLEARN:
         return None
+    sig = _dataset_signature(df)
+    cache_file = CACHE_DIR / f'goal_model_{sig}.joblib'
+    if use_cache and cache_file.exists():
+        try:
+            return joblib.load(cache_file)
+        except Exception:
+            pass  # corrupt/incompatible cache -> retrain below
     X, y = build_training_xy(df)
     model = HistGradientBoostingRegressor(loss='poisson', max_depth=4, learning_rate=0.06,
                                           max_iter=350, min_samples_leaf=40,
                                           l2_regularization=1.0, random_state=42)
     model.fit(X, y)
+    if use_cache:
+        try:
+            CACHE_DIR.mkdir(exist_ok=True)
+            for old in CACHE_DIR.glob('goal_model_*.joblib'):
+                old.unlink()  # keep only the current fingerprint
+            joblib.dump(model, cache_file)
+        except Exception:
+            pass
     return model
 
 # ---------------------------------------------------------------------------
@@ -410,12 +441,12 @@ def make_effective_elo(state, presets, pool=None):
 # ---------------------------------------------------------------------------
 # 6. Standings, best-thirds, slot resolution
 # ---------------------------------------------------------------------------
-def deterministic_standings(group_teams, group_df, eff, state, model):
+def deterministic_standings(group_teams, group_df, eff, state, model, lam=None):
     """Order a group's 4 teams by expected points (continuous, no ties)."""
     pts = {t: 0.0 for t in group_teams}; gdv = {t: 0.0 for t in group_teams}
     sub = group_df[group_df.home_team.isin(group_teams) & group_df.away_team.isin(group_teams)]
     for r in sub.itertuples(index=False):
-        lh, la = lambdas(r.home_team, r.away_team, eff, state, model)
+        lh, la = lam[r.home_team][r.away_team] if lam else lambdas(r.home_team, r.away_team, eff, state, model)
         ph, pd_, pa = outcome_probs(score_matrix(lh, la))
         pts[r.home_team] += 3 * ph + pd_; pts[r.away_team] += 3 * pa + pd_
         gdv[r.home_team] += lh - la; gdv[r.away_team] += la - lh
@@ -447,6 +478,7 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
         cfg = user_config or {}
         warns = []
         eff = {t: effective_elo(t, cfg) for t in ratings}
+        lam = build_lambda_matrix(list(ratings), eff, state, model)   # one batched inference
         score_mode = cfg.get('options', {}).get('score_mode', 'max_ev')
 
         manual_orders = {g.upper(): c['order'] for g, c in cfg.get('groups', {}).items()
@@ -456,7 +488,7 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
         gp = group_df.copy()
         hg_, ag_, cor_, yel_, red_, win_ = [], [], [], [], [], []
         for r in group_df.itertuples(index=False):
-            lh, la = lambdas(r.home_team, r.away_team, eff, state, model)
+            lh, la = lam[r.home_team][r.away_team]
             M = score_matrix(lh, la); ph, pd_, pa = outcome_probs(M)
             grp = r.group
             if grp in manual_orders:
@@ -486,7 +518,7 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
             else:
                 if gc.get('mode') == 'manual':
                     warns.append(f'Group {g}: invalid manual order → using model')
-                order = deterministic_standings(gteams, group_df, eff, state, model)
+                order = deterministic_standings(gteams, group_df, eff, state, model, lam)
             winners[g], runners[g], thirds[g] = order[0], order[1], order[2]
 
         # ---- best-8 thirds (rank by expected group points) ----
@@ -494,7 +526,7 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
             s = 0.0
             for opp in groups[g]:
                 if opp == team: continue
-                lh, la = lambdas(team, opp, eff, state, model)
+                lh, la = lam[team][opp]
                 ph, pd_, pa = outcome_probs(score_matrix(lh, la))
                 s += 3 * ph + pd_
             return s
@@ -519,7 +551,7 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
             mid = int(r.match_id)
             home = rslot(r.slot_home, mid)
             away = third_assign[mid] if 'Best 3rd' in str(r.slot_away) else rslot(r.slot_away, mid)
-            lh, la = lambdas(home, away, eff, state, model)
+            lh, la = lam[home][away]
             Aet = after_et_matrix(lh, la); M90 = score_matrix(lh, la)
             ph, pd_, pa = outcome_probs(M90)
             pen_home = 1 / (1 + 10 ** (-(eff[home] - eff[away]) / 400))
@@ -559,6 +591,236 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
     return resolve
 
 # ---------------------------------------------------------------------------
+# 7b. Monte-Carlo tournament simulation  →  realistic title-race probabilities
+# ---------------------------------------------------------------------------
+# Why this exists: a naive "softmax over Elo" massively over-weights the single strongest
+# team (e.g. Spain) because it ignores the bracket — a favourite still has to survive ~7 knockout
+# coin-flips, any of which it can lose. A Monte-Carlo simulation samples real scorelines from the
+# model's expected goals and plays the whole tournament thousands of times, so champion odds reflect
+# both team strength AND draw/variance. This is the industry-standard (FiveThirtyEight-style) method
+# and yields well-calibrated probabilities instead of a runaway favourite.
+
+def _third_slots_of(knock_df):
+    return [(int(r.match_id), parse_third_groups(r.slot_away))
+            for r in knock_df.itertuples(index=False) if 'Best 3rd' in str(r.slot_away)]
+
+
+def build_lambda_matrix(teams, eff, state, model):
+    """λ_home, λ_away for every ordered pair, reused for display + simulation + resolve.
+
+    Vectorised: instead of ~2300 one-row ``model.predict`` calls (≈9s on the VM), we assemble a
+    single design matrix of "goals scored by X vs Y" for every ordered pair and predict once
+    (≈50ms). This is the single biggest inference-cost win and is what lets the box serve many
+    concurrent users without the goal model becoming the bottleneck."""
+    if model is None:
+        return {h: {a: lambdas(h, a, eff, state, model) for a in teams if a != h} for h in teams}
+    rows, idx = [], []
+    for x in teams:
+        for y in teams:
+            if x == y:
+                continue
+            neutral = 0 if (x in HOSTS or y in HOSTS) else 1
+            rows.append(_feat_row(x, y, eff[x], eff[y], state, 1 if x in HOSTS else 0, neutral))
+            idx.append((x, y))
+    preds = np.clip(model.predict(pd.DataFrame(rows, columns=FEATURES)), 0.15, 6)
+    G = {pair: float(p) for pair, p in zip(idx, preds)}    # goals scored by pair[0] vs pair[1]
+    return {h: {a: (G[(h, a)], G[(a, h)]) for a in teams if a != h} for h in teams}
+
+
+def _rslot_sim(slot, mid, winners, runners, third_assign, win_of, los_of):
+    s = str(slot).strip()
+    if s.startswith('Winner Group '): return winners[s.split()[-1]]
+    if s.startswith('Runner-up Group '): return runners[s.split()[-1]]
+    if 'Best 3rd' in s: return third_assign[mid]
+    if s.startswith('Winner Match '): return win_of[int(s.split()[-1])]
+    if s.startswith('Loser Match '): return los_of.get(int(s.split()[-1]), 'TBD')
+    return s
+
+
+def simulate_tournament(lam, groups, knock_df, third_slots, rng, knock_rows=None):
+    """Play one full tournament, sampling scorelines from Poisson(λ). Returns win_of/round sets."""
+    winners, runners, thirds, third_metric = {}, {}, {}, {}
+    for g, gteams in groups.items():
+        pts = {t: 0 for t in gteams}; gd = {t: 0 for t in gteams}; gf = {t: 0 for t in gteams}
+        n = len(gteams)
+        for i in range(n):
+            for j in range(i + 1, n):
+                h, a = gteams[i], gteams[j]
+                lh, la = lam[h][a]
+                hg, ag = int(rng.poisson(lh)), int(rng.poisson(la))
+                gf[h] += hg; gf[a] += ag; gd[h] += hg - ag; gd[a] += ag - hg
+                if hg > ag: pts[h] += 3
+                elif ag > hg: pts[a] += 3
+                else: pts[h] += 1; pts[a] += 1
+        order = sorted(gteams, key=lambda t: (pts[t], gd[t], gf[t], rng.random()), reverse=True)
+        winners[g], runners[g], thirds[g] = order[0], order[1], order[2]
+        t3 = order[2]; third_metric[g] = (pts[t3], gd[t3], gf[t3], rng.random())
+    ranked = sorted(third_metric.items(), key=lambda kv: kv[1], reverse=True)
+    qual = [(g, thirds[g]) for g, _ in ranked[:8]]
+    third_assign = allocate_best_thirds(qual, third_slots)
+
+    rows = knock_rows if knock_rows is not None else list(knock_df.itertuples(index=False))
+    win_of, los_of = {}, {}
+    reach = {}  # team -> furthest round code
+    for r in rows:
+        mid = int(r.match_id)
+        home = _rslot_sim(r.slot_home, mid, winners, runners, third_assign, win_of, los_of)
+        away = (third_assign[mid] if 'Best 3rd' in str(r.slot_away)
+                else _rslot_sim(r.slot_away, mid, winners, runners, third_assign, win_of, los_of))
+        lh, la = lam[home][away]
+        hg, ag = int(rng.poisson(lh)), int(rng.poisson(la))
+        if hg > ag: w, l = home, away
+        elif ag > hg: w, l = away, home
+        else:  # penalties: weight by attacking strength
+            w, l = (home, away) if rng.random() < lh / (lh + la) else (away, home)
+        win_of[mid], los_of[mid] = w, l
+    return win_of, winners, runners
+
+
+# Knockout match-id milestones (R32 73-88, R16 89-96, QF 97-100, SF 101-102, 3rd 103, Final 104)
+_R32, _R16, _QF, _SF, _FINAL = range(73, 89), range(89, 97), range(97, 101), (101, 102), 104
+
+
+def champion_probabilities(lam, groups, knock_df, n_sims=4000, seed=12345):
+    """Run the Monte-Carlo and aggregate per-team round-reach + title probabilities."""
+    third_slots = _third_slots_of(knock_df)
+    knock_rows = list(knock_df.itertuples(index=False))
+    rng = np.random.default_rng(seed)
+    teams = list(lam.keys())
+    champ = {t: 0 for t in teams}; final = {t: 0 for t in teams}
+    semi = {t: 0 for t in teams}; qf = {t: 0 for t in teams}; r16 = {t: 0 for t in teams}
+    for _ in range(n_sims):
+        win_of, _w, _r = simulate_tournament(lam, groups, knock_df, third_slots, rng, knock_rows)
+        for m in _R32:
+            if m in win_of: r16[win_of[m]] += 1
+        for m in _R16:
+            if m in win_of: qf[win_of[m]] += 1
+        for m in _QF:
+            if m in win_of: semi[win_of[m]] += 1
+        for m in _SF:
+            if m in win_of: final[win_of[m]] += 1
+        if _FINAL in win_of:
+            champ[win_of[_FINAL]] += 1
+    out = []
+    for t in teams:
+        out.append({'team': t,
+                    'champion': champ[t] / n_sims, 'final': final[t] / n_sims,
+                    'semi': semi[t] / n_sims, 'quarter': qf[t] / n_sims, 'r16': r16[t] / n_sims})
+    out.sort(key=lambda d: -d['champion'])
+    return out
+
+
+# ---------------------------------------------------------------------------
+# 7c. Incremental / continual learning — Elo update from finalised official results
+# ---------------------------------------------------------------------------
+# When an official FIFA result lands we do NOT retrain the gradient booster (too heavy for the VM).
+# Instead we apply a single, principled World-Football-Elo update to both teams. This is genuine
+# lightweight online learning: every future fixture's expected goals shift because λ depends on
+# effective Elo, so predictions improve continuously as real results arrive — for a few microseconds
+# of compute per match instead of a multi-second refit.
+
+def elo_update(state, home, away, home_goals, away_goals, k=40, home_adv=55):
+    if home not in state or away not in state:
+        return
+    Rh, Ra = state[home]['elo'], state[away]['elo']
+    Eh = 1.0 / (1.0 + 10 ** (-((Rh + home_adv) - Ra) / 400.0))
+    if home_goals > away_goals: Sh = 1.0
+    elif away_goals > home_goals: Sh = 0.0
+    else: Sh = 0.5
+    gd = abs(home_goals - away_goals)
+    g = 1.0 if gd <= 1 else (1.5 if gd == 2 else (11 + gd) / 8.0)   # WF-Elo goal weighting
+    kk = k * g
+    state[home]['elo'] = Rh + kk * (Sh - Eh)
+    state[away]['elo'] = Ra + kk * ((1 - Sh) - (1 - Eh))
+    # nudge rolling goal averages so the goal model's form features track reality too
+    for side, gf_, ga_ in ((home, home_goals, away_goals), (away, away_goals, home_goals)):
+        state[side]['gf'] = 0.8 * state[side]['gf'] + 0.2 * gf_
+        state[side]['ga'] = 0.8 * state[side]['ga'] + 0.2 * ga_
+
+
+# ---------------------------------------------------------------------------
+# 7d. Match-insight helpers (head-to-head history + probable line-ups)
+# ---------------------------------------------------------------------------
+def head_to_head(mdf, home, away, n=6):
+    """Historical record between two competition teams (maps to dataset names first)."""
+    empty = {'played': 0, 'home_wins': 0, 'away_wins': 0, 'draws': 0,
+             'home_goals': 0, 'away_goals': 0, 'recent': []}
+    if mdf is None:
+        return empty
+    mh, ma = _matchname(home), _matchname(away)
+    sub = mdf[((mdf.home_team == mh) & (mdf.away_team == ma)) |
+              ((mdf.home_team == ma) & (mdf.away_team == mh))]
+    if sub.empty:
+        return empty
+    hw = aw = dr = hg = ag = 0
+    recent = []
+    for r in sub.sort_values('date').itertuples(index=False):
+        # normalise so goals are reported from `home`'s perspective
+        if r.home_team == mh:
+            g_h, g_a = int(r.home_score), int(r.away_score)
+        else:
+            g_h, g_a = int(r.away_score), int(r.home_score)
+        hg += g_h; ag += g_a
+        if g_h > g_a: hw += 1
+        elif g_a > g_h: aw += 1
+        else: dr += 1
+        recent.append({'date': str(r.date)[:10], 'home': home, 'away': away,
+                       'home_goals': g_h, 'away_goals': g_a})
+    recent = recent[-n:][::-1]
+    return {'played': hw + aw + dr, 'home_wins': hw, 'away_wins': aw, 'draws': dr,
+            'home_goals': hg, 'away_goals': ag, 'recent': recent}
+
+
+# 4-3-3 outfield shape for a "probable XI" sketch from the strongest available squad.
+_XI_SHAPE = [('GK', 1), ('DEF', 4), ('MID', 3), ('FWD', 3)]
+
+
+def _pid(p):
+    return p.get('player_id', p.get('name'))
+
+
+def probable_xi(team, presets, pool):
+    """A probable 4-3-3 sketch from the strongest available players.
+
+    Merges the named-squad preset with the broader player pool (some nations have only a thin
+    preset). Every formation slot is filled with the best available player of that position; if the
+    dataset is too thin for a nation, remaining slots are clearly marked '—' rather than inventing
+    players, so the XI always renders as a complete shape without fabricating identities."""
+    merged = {}
+    for src in (presets.get(team) or [], pool.get(team) or []):
+        for p in src:
+            merged.setdefault(_pid(p), p)
+    players = list(merged.values())
+    by = {'GK': [], 'DEF': [], 'MID': [], 'FWD': []}
+    for p in players:
+        by.get(p.get('position', 'MID'), by['MID']).append(p)
+    for k in by:
+        by[k].sort(key=lambda x: -x.get('rating', 0))
+
+    xi, used, partial = [], set(), False
+    leftovers = lambda: sorted((p for p in players if _pid(p) not in used),
+                               key=lambda x: -x.get('rating', 0))
+    for pos, n in _XI_SHAPE:
+        avail = [p for p in by[pos] if _pid(p) not in used]
+        for i in range(n):
+            if i < len(avail):
+                p = avail[i]; used.add(_pid(p))
+                xi.append({'name': p.get('name', '—'), 'position': pos,
+                           'rating': int(p.get('rating', 0))})
+            else:
+                rest = leftovers()                      # try any other real player first
+                if rest:
+                    p = rest[0]; used.add(_pid(p))
+                    xi.append({'name': p.get('name', '—'), 'position': pos,
+                               'rating': int(p.get('rating', 0))})
+                else:
+                    partial = True
+                    xi.append({'name': '—', 'position': pos, 'rating': 0})
+    formation = '-'.join(str(n) for _pos, n in _XI_SHAPE[1:])  # e.g. 4-3-3
+    return {'formation': formation, 'players': xi, 'partial': partial}
+
+
+# ---------------------------------------------------------------------------
 # 8. Build everything
 # ---------------------------------------------------------------------------
 def build():
@@ -573,7 +835,7 @@ def build():
     resolve = make_resolver(group_df, knock_df, groups, state, model, eff_fn, ratings)
     return dict(group_df=group_df, knock_df=knock_df, groups=groups, teams=teams,
                 state=state, model=model, presets=presets, pool=pool, ratings=ratings,
-                effective_elo=eff_fn, resolve=resolve)
+                mdf=mdf, effective_elo=eff_fn, resolve=resolve)
 
 # ---------------------------------------------------------------------------
 # 9. Backtest on World Cup 2022 (validate with competition scoring)

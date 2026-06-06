@@ -1,11 +1,16 @@
-"""Tiny SQLite layer for fan votes (stdlib only, no ORM)."""
+"""Tiny SQLite layer for fan votes + official results (stdlib only, no ORM).
+
+The DB path can be overridden with the ``WC_DB_PATH`` env var (used in Docker so the file lives on
+a persistent volume and survives redeploys)."""
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 
-DB_PATH = Path(__file__).resolve().parent / "wc26.db"
+DB_PATH = Path(os.environ.get("WC_DB_PATH", Path(__file__).resolve().parent / "wc26.db"))
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 _LOCK = Lock()
 
 
@@ -27,6 +32,53 @@ def init_db():
                 payload TEXT
             )"""
         )
+        # Finalised official FIFA results — the continual-learning feed. One row per match_id;
+        # `locked` means the result is official and may no longer be edited by anyone.
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS official_results (
+                match_id INTEGER PRIMARY KEY,
+                stage TEXT NOT NULL,
+                home_team TEXT NOT NULL,
+                away_team TEXT NOT NULL,
+                home_goals INTEGER NOT NULL,
+                away_goals INTEGER NOT NULL,
+                locked INTEGER NOT NULL DEFAULT 1,
+                ts TEXT NOT NULL
+            )"""
+        )
+
+
+# ---------------------------------------------------------------------------
+# Official results (continual learning)
+# ---------------------------------------------------------------------------
+def upsert_official_result(match_id, stage, home, away, hg, ag, locked=True):
+    ts = datetime.now(timezone.utc).isoformat()
+    with _LOCK, _conn() as c:
+        c.execute(
+            """INSERT INTO official_results
+                 (match_id, stage, home_team, away_team, home_goals, away_goals, locked, ts)
+               VALUES (?,?,?,?,?,?,?,?)
+               ON CONFLICT(match_id) DO UPDATE SET
+                 stage=excluded.stage, home_team=excluded.home_team, away_team=excluded.away_team,
+                 home_goals=excluded.home_goals, away_goals=excluded.away_goals,
+                 locked=excluded.locked, ts=excluded.ts""",
+            (int(match_id), stage, home, away, int(hg), int(ag), 1 if locked else 0, ts),
+        )
+
+
+def list_official_results() -> list[dict]:
+    with _LOCK, _conn() as c:
+        rows = c.execute(
+            "SELECT match_id, stage, home_team, away_team, home_goals, away_goals, locked, ts "
+            "FROM official_results ORDER BY match_id"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def delete_official_result(match_id) -> int:
+    with _LOCK, _conn() as c:
+        cur = c.execute("DELETE FROM official_results WHERE match_id=?", (int(match_id),))
+        return cur.rowcount
 
 
 def add_vote(team1: str, team2: str, champion: str | None = None, payload: dict | None = None) -> int:
