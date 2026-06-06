@@ -1,0 +1,1 @@
+# FIFA-WC-26-predictor
