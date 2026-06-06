@@ -1,6 +1,8 @@
 // Thin API client. Uses relative /api (Vite proxy in dev, same-origin in prod).
 import type {
   BootstrapData,
+  MatchDetail,
+  NewsItem,
   PoolPlayer,
   StrengthData,
   VoteSummary,
@@ -9,7 +11,8 @@ import type {
 const BASE = import.meta.env.VITE_API_BASE || "/api";
 
 async function getJSON<T>(path: string): Promise<T> {
-  const r = await fetch(`${BASE}${path}`);
+  // credentials: include so the session cookie (wcsid) round-trips for the 20-min session.
+  const r = await fetch(`${BASE}${path}`, { credentials: "include" });
   if (!r.ok) throw new Error(`GET ${path} failed: ${r.status}`);
   return r.json() as Promise<T>;
 }
@@ -18,6 +21,7 @@ async function postJSON<T>(path: string, body: unknown): Promise<T> {
   const r = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(body),
   });
   if (!r.ok) {
@@ -42,4 +46,9 @@ export const api = {
   vote: (body: { team1: string; team2: string; champion?: string; payload?: unknown }) =>
     postJSON<VoteSummary>("/vote", body),
   votes: () => getJSON<VoteSummary>("/votes"),
+  match: (home: string, away: string) =>
+    getJSON<MatchDetail>(
+      `/match?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`,
+    ),
+  news: (n = 8) => getJSON<{ items: NewsItem[] }>(`/news?n=${n}`),
 };

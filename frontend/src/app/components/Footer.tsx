@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import logoUrl from "../../../Logo-Predictor.png";
+import { CONTACT_EMAIL } from "../lib/site";
 
 export function Footer() {
   return (
@@ -38,6 +39,15 @@ export function Footer() {
                 Methodology
               </Link>
             </nav>
+            <div className="text-xs text-muted-foreground">
+              Contact:{" "}
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="underline hover:text-foreground transition-colors break-all"
+              >
+                {CONTACT_EMAIL}
+              </a>
+            </div>
             <span className="stamp self-start" style={{ color: "var(--stamp-red)" }}>
               © {new Date().getFullYear()} · ISSUE 01
             </span>

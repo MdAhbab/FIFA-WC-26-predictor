@@ -4,8 +4,10 @@ import { api } from "./api";
 import type {
   GroupForecast,
   Meta,
+  OfficialResult,
   PairResult,
   RawTeam,
+  SessionInfo,
   StrengthData,
   TitleRaceEntry,
   VoteSummary,
@@ -31,6 +33,7 @@ let PAIRWISE: Record<string, Record<string, PairResult>> = {};
 let GROUP_FORECASTS: Record<string, GroupForecast> = {};
 let TITLE_RACE: TitleRaceEntry[] = [];
 let META: Meta | null = null;
+let RESULTS: OfficialResult[] = [];
 let LOADED = false;
 
 function applyPayload(d: StrengthData) {
@@ -50,13 +53,20 @@ export function getMeta() {
 export function getTitleRace() {
   return TITLE_RACE;
 }
+export function getOfficialResults(): OfficialResult[] {
+  return RESULTS;
+}
 
-/** Load all base data once before the app renders. Returns the initial vote summary too. */
-export async function bootstrap(): Promise<{ votes: VoteSummary }> {
+/** Load all base data once before the app renders. Returns the initial vote summary + session. */
+export async function bootstrap(): Promise<{
+  votes: VoteSummary;
+  session: SessionInfo;
+}> {
   const d = await api.bootstrap();
   applyPayload(d);
+  RESULTS = d.results ?? [];
   LOADED = true;
-  return { votes: d.votes };
+  return { votes: d.votes, session: d.session };
 }
 
 /** Recompute predictions under team bias / custom squads (player picks). */

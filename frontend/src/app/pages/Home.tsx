@@ -7,6 +7,7 @@ import { getMLBracket, teamChampionProbabilities } from "../lib/PicksContext";
 import { TeamSticker } from "../components/TeamSticker";
 import { AdSlot } from "../components/AdSlot";
 import { FanVote } from "../components/FanVote";
+import { RecentNews } from "../components/RecentNews";
 
 export default function Home() {
   useSEO({
@@ -115,6 +116,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Recent football news — vertically scrollable rail directly below the hero */}
+      <RecentNews />
+
       {/* How it works */}
       <section className="mt-10 grid sm:grid-cols-3 gap-4">
         {[
@@ -164,7 +168,7 @@ export default function Home() {
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="display tracking-wide">FAVOURITES BOARD</h2>
           <span className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            Champion · prior probability
+            Champion · simulated probability
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

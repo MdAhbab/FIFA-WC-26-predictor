@@ -54,13 +54,16 @@ export default function Methodology() {
 
         <Section title="Goal model">
           <p>
-            Score lines come from a{" "}
+            Expected goals come from a{" "}
             <strong className="text-foreground">
-              bivariate Poisson model
+              gradient-boosted Poisson regressor
             </strong>{" "}
-            with team-specific attack and defence rates derived from the
-            features above. The joint distribution gives us not just a winner,
-            but the probability of every plausible scoreline.
+            (a histogram gradient-boosting model with a Poisson objective) trained in long format —
+            one row per team per match. Those expected goals are turned into a full scoreline
+            distribution with a{" "}
+            <strong className="text-foreground">Dixon–Coles</strong> adjustment that corrects the
+            low-score correlation real football shows, so we get the probability of every plausible
+            scoreline, not just a winner.
           </p>
         </Section>
 
@@ -79,13 +82,24 @@ export default function Methodology() {
 
         <Section title="The title race">
           <p>
-            The champion / finalist / semi-finalist probabilities you see on
-            the cover come from{" "}
-            <strong className="text-foreground">
-              50,000 Monte-Carlo simulations
-            </strong>{" "}
-            of the entire 104-match tournament, re-seeded each run from the
-            model's own group forecasts.
+            The champion / finalist / semi-finalist probabilities you see on the cover come from{" "}
+            <strong className="text-foreground">thousands of Monte-Carlo simulations</strong> of the
+            entire 104-match tournament. Each run samples real scorelines from the goal model, plays
+            the groups, allocates the eight best third-placed teams, and resolves every knockout tie
+            (with penalties for draws). This matters: a single strongest team still has to survive
+            seven knockout rounds, so simulating the bracket keeps the favourite&rsquo;s odds
+            realistic instead of letting one team run away with the board.
+          </p>
+        </Section>
+
+        <Section title="Learning from live results">
+          <p>
+            As official results are finalised during the tournament, each one feeds back into the
+            model with a single, lightweight{" "}
+            <strong className="text-foreground">Elo update</strong> for both teams. Completed
+            fixtures are locked to their real scores, and every remaining probability is
+            recomputed — so the predictions sharpen continuously as the tournament unfolds, without
+            an expensive retrain.
           </p>
         </Section>
 

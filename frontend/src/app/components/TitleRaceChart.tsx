@@ -31,7 +31,7 @@ const COLORS = [
 export function TitleRaceChart({ data, topN = 10 }: Props) {
   const top = data.slice(0, topN).map((d) => ({
     ...d,
-    pct: +(d.champion * 100).toFixed(1),
+    pct: +(d.prob * 100).toFixed(1),
     label: `${d.team}`,
   }));
 

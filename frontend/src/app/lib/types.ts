@@ -18,6 +18,10 @@ export interface MatchPrediction {
   reds: number;
   date: string;
   venue: string;
+  /** True once the official FIFA result has been recorded for this fixture. */
+  official?: boolean;
+  /** True when the result is final and may no longer be edited. */
+  locked?: boolean;
 }
 
 export interface GroupStanding {
@@ -52,14 +56,85 @@ export interface PairResult {
 export interface TitleRaceEntry {
   team: string;
   iso: string;
-  prob: number;
+  prob: number; // champion probability (Monte-Carlo)
+  final?: number; // reach-the-final probability
+  semi?: number; // reach-the-semis probability
+  quarter?: number; // reach-the-quarters probability
+  r16?: number; // reach-the-round-of-16 probability
 }
 
 export interface Meta {
   champion: string;
   champion_iso: string;
+  champion_prob?: number;
   finalists: [string, string] | string[];
   semis: string[];
+  sims?: number;
+  results_applied?: number;
+}
+
+export interface OfficialResult {
+  match_id: number;
+  stage: string;
+  home: string;
+  away: string;
+  hg: number;
+  ag: number;
+  locked: boolean;
+}
+
+export interface SessionInfo {
+  active: boolean;
+  ttl_seconds: number;
+  expires_in?: number;
+  hits?: number;
+  active_sessions?: number;
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  date: string;
+  teams: string[];
+  tag?: string;
+  live?: boolean;
+}
+
+export interface H2H {
+  played: number;
+  home_wins: number;
+  away_wins: number;
+  draws: number;
+  home_goals: number;
+  away_goals: number;
+  recent: {
+    date: string;
+    home: string;
+    away: string;
+    home_goals: number;
+    away_goals: number;
+  }[];
+}
+
+export interface Lineup {
+  formation: string;
+  players: { name: string; position: "GK" | "DEF" | "MID" | "FWD"; rating: number }[];
+  /** True when squad data was too thin to name a full XI (placeholders used). */
+  partial?: boolean;
+}
+
+export interface MatchDetail {
+  home: RawTeam;
+  away: RawTeam;
+  probabilities: { home: number; draw: number; away: number };
+  predicted: { homeGoals: number; awayGoals: number; lambdaHome: number; lambdaAway: number };
+  h2h: H2H;
+  lineups: { home: Lineup; away: Lineup };
+  news: NewsItem[];
+  hasNews: boolean;
 }
 
 export interface VoteEntry {
@@ -85,6 +160,8 @@ export interface StrengthData {
 
 export interface BootstrapData extends StrengthData {
   votes: VoteSummary;
+  results: OfficialResult[];
+  session: SessionInfo;
 }
 
 export interface PoolPlayer {

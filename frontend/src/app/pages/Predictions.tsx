@@ -6,6 +6,7 @@ import { GROUP_LETTERS } from "../lib/data";
 import type { KnockoutResult } from "../lib/PicksContext";
 import { TeamBadge } from "../components/TeamBadge";
 import { AdSlot } from "../components/AdSlot";
+import { MatchDetailDialog, type MatchRef } from "../components/MatchDetailDialog";
 import { useSEO } from "../lib/useSEO";
 
 export default function Predictions() {
@@ -15,6 +16,7 @@ export default function Predictions() {
       "What the ML model actually predicts for the 2026 FIFA World Cup — every group, every knockout, every score.",
   });
   const ml = useMemo(() => getMLBracket(), []);
+  const [selected, setSelected] = useState<MatchRef | null>(null);
 
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-12">
@@ -77,7 +79,7 @@ export default function Predictions() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {GROUP_LETTERS.map((g, i) => (
             <div key={g}>
-              <GroupCard letter={g} ml={ml} />
+              <GroupCard letter={g} ml={ml} onOpenMatch={setSelected} />
               {i === 5 && (
                 <div className="md:col-span-2 lg:col-span-3">
                   <AdSlot variant="leaderboard" />
@@ -91,13 +93,17 @@ export default function Predictions() {
       {/* Bracket lists */}
       <section>
         <h2 className="display tracking-wide mb-4">KNOCKOUTS</h2>
-        <KnockoutColumn title="Round of 32" matches={ml.r32} />
+        <KnockoutColumn title="Round of 32" matches={ml.r32} onOpenMatch={setSelected} />
         <AdSlot variant="in-article" />
-        <KnockoutColumn title="Round of 16" matches={ml.r16} />
-        <KnockoutColumn title="Quarter-finals" matches={ml.qf} />
-        <KnockoutColumn title="Semi-finals" matches={ml.sf} />
-        {ml.final && <KnockoutColumn title="Final" matches={[ml.final]} />}
+        <KnockoutColumn title="Round of 16" matches={ml.r16} onOpenMatch={setSelected} />
+        <KnockoutColumn title="Quarter-finals" matches={ml.qf} onOpenMatch={setSelected} />
+        <KnockoutColumn title="Semi-finals" matches={ml.sf} onOpenMatch={setSelected} />
+        {ml.final && (
+          <KnockoutColumn title="Final" matches={[ml.final]} onOpenMatch={setSelected} />
+        )}
       </section>
+
+      <MatchDetailDialog match={selected} onClose={() => setSelected(null)} />
     </main>
   );
 }
@@ -105,9 +111,11 @@ export default function Predictions() {
 function GroupCard({
   letter,
   ml,
+  onOpenMatch,
 }: {
   letter: string;
   ml: ReturnType<typeof getMLBracket>;
+  onOpenMatch: (m: MatchRef) => void;
 }) {
   const [open, setOpen] = useState(false);
   const standings = ml.effectiveStandings[letter];
@@ -180,20 +188,41 @@ function GroupCard({
           >
             <div className="px-3 pb-3 space-y-1.5 pt-2">
               {matches.map((m) => (
-                <li
-                  key={m.matchId}
-                  className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-sm rounded-md border border-foreground/10 bg-background/60 px-2 py-1.5"
-                >
-                  <TeamBadge name={m.home.name} iso={m.home.iso} size={20} />
-                  <span className="mono tabular-nums text-center">
-                    {m.homeGoals}–{m.awayGoals}
-                  </span>
-                  <TeamBadge
-                    name={m.away.name}
-                    iso={m.away.iso}
-                    size={20}
-                    reverse
-                  />
+                <li key={m.matchId}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenMatch({
+                        home: m.home.name,
+                        away: m.away.name,
+                        homeIso: m.home.iso,
+                        awayIso: m.away.iso,
+                        round: `Group ${letter}`,
+                        date: m.date,
+                        venue: m.venue,
+                      })
+                    }
+                    className="w-full grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-sm rounded-md border border-foreground/10 bg-background/60 px-2 py-1.5 hover:border-foreground/30 transition-colors text-left"
+                  >
+                    <TeamBadge name={m.home.name} iso={m.home.iso} size={20} />
+                    <span className="mono tabular-nums text-center flex items-center gap-1 justify-center">
+                      {m.official && (
+                        <span
+                          className="text-[8px] display tracking-wider px-1 rounded"
+                          style={{ color: "var(--stamp-red)", border: "1px solid var(--stamp-red)" }}
+                        >
+                          FT
+                        </span>
+                      )}
+                      {m.homeGoals}–{m.awayGoals}
+                    </span>
+                    <TeamBadge
+                      name={m.away.name}
+                      iso={m.away.iso}
+                      size={20}
+                      reverse
+                    />
+                  </button>
                 </li>
               ))}
             </div>
@@ -207,9 +236,11 @@ function GroupCard({
 function KnockoutColumn({
   title,
   matches,
+  onOpenMatch,
 }: {
   title: string;
   matches: KnockoutResult[];
+  onOpenMatch: (m: MatchRef) => void;
 }) {
   return (
     <div className="mb-8">
@@ -220,9 +251,21 @@ function KnockoutColumn({
         {matches.map((m) => {
           const homeWin = m.winner === "home";
           return (
-            <div
+            <button
+              type="button"
               key={m.matchId}
-              className="rounded-md border border-foreground/15 bg-card px-3 py-2"
+              onClick={() =>
+                onOpenMatch({
+                  home: m.home.name,
+                  away: m.away.name,
+                  homeIso: m.home.iso,
+                  awayIso: m.away.iso,
+                  round: title,
+                  date: m.date,
+                  venue: m.venue,
+                })
+              }
+              className="text-left w-full rounded-md border border-foreground/15 bg-card px-3 py-2 hover:border-foreground/40 transition-colors"
             >
               <div className="flex items-center justify-between text-[10px] mono uppercase tracking-wider text-muted-foreground mb-1">
                 <span>×{m.multiplier}</span>
@@ -254,7 +297,7 @@ function KnockoutColumn({
                   className={homeWin ? "opacity-50" : ""}
                 />
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
