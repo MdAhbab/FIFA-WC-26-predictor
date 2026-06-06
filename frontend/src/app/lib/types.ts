@@ -129,6 +129,8 @@ export interface Lineup {
 export interface MatchDetail {
   home: RawTeam;
   away: RawTeam;
+  matchId?: number | null;
+  finalized?: boolean;
   probabilities: { home: number; draw: number; away: number };
   predicted: { homeGoals: number; awayGoals: number; lambdaHome: number; lambdaAway: number };
   h2h: H2H;

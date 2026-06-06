@@ -5,7 +5,9 @@ a persistent volume and survives redeploys)."""
 import json
 import os
 import sqlite3
-from datetime import datetime, timezone
+import hashlib
+import secrets
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from threading import Lock
 
@@ -46,30 +48,63 @@ def init_db():
                 ts TEXT NOT NULL
             )"""
         )
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS admin_users (
+                username TEXT PRIMARY KEY,
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL
+            )"""
+        )
+        
+        # Migrations: Add new columns if they do not exist
+        try:
+            c.execute("ALTER TABLE votes ADD COLUMN name TEXT")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute("ALTER TABLE votes ADD COLUMN ip_address TEXT")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute("ALTER TABLE votes ADD COLUMN referrer_vote_id INTEGER")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute("ALTER TABLE official_results ADD COLUMN winner_team TEXT")
+        except sqlite3.OperationalError:
+            pass
+
+        # Seed default admin if not exists
+        existing = c.execute("SELECT username FROM admin_users WHERE username='ahbab'").fetchone()
+        if not existing:
+            salt = secrets.token_hex(16)
+            pw_hash = hashlib.sha256((salt + 'ahbab123').encode()).hexdigest()
+            c.execute("INSERT INTO admin_users (username, password_hash, salt) VALUES (?,?,?)",
+                      ('ahbab', pw_hash, salt))
 
 
 # ---------------------------------------------------------------------------
 # Official results (continual learning)
 # ---------------------------------------------------------------------------
-def upsert_official_result(match_id, stage, home, away, hg, ag, locked=True):
+def upsert_official_result(match_id, stage, home, away, hg, ag, locked=True, winner_team=None):
     ts = datetime.now(timezone.utc).isoformat()
     with _LOCK, _conn() as c:
         c.execute(
             """INSERT INTO official_results
-                 (match_id, stage, home_team, away_team, home_goals, away_goals, locked, ts)
-               VALUES (?,?,?,?,?,?,?,?)
+                 (match_id, stage, home_team, away_team, home_goals, away_goals, locked, ts, winner_team)
+               VALUES (?,?,?,?,?,?,?,?,?)
                ON CONFLICT(match_id) DO UPDATE SET
                  stage=excluded.stage, home_team=excluded.home_team, away_team=excluded.away_team,
                  home_goals=excluded.home_goals, away_goals=excluded.away_goals,
-                 locked=excluded.locked, ts=excluded.ts""",
-            (int(match_id), stage, home, away, int(hg), int(ag), 1 if locked else 0, ts),
+                 locked=excluded.locked, ts=excluded.ts, winner_team=excluded.winner_team""",
+            (int(match_id), stage, home, away, int(hg), int(ag), 1 if locked else 0, ts, winner_team),
         )
 
 
 def list_official_results() -> list[dict]:
     with _LOCK, _conn() as c:
         rows = c.execute(
-            "SELECT match_id, stage, home_team, away_team, home_goals, away_goals, locked, ts "
+            "SELECT match_id, stage, home_team, away_team, home_goals, away_goals, locked, ts, winner_team "
             "FROM official_results ORDER BY match_id"
         ).fetchall()
     return [dict(r) for r in rows]
@@ -81,12 +116,12 @@ def delete_official_result(match_id) -> int:
         return cur.rowcount
 
 
-def add_vote(team1: str, team2: str, champion: str | None = None, payload: dict | None = None) -> int:
+def add_vote(team1: str, team2: str, champion: str | None = None, payload: dict | None = None, name: str | None = None, ip_address: str | None = None, referrer_vote_id: int | None = None) -> int:
     ts = datetime.now(timezone.utc).isoformat()
     with _LOCK, _conn() as c:
         cur = c.execute(
-            "INSERT INTO votes (ts, team1, team2, champion, payload) VALUES (?,?,?,?,?)",
-            (ts, team1, team2, champion, json.dumps(payload) if payload else None),
+            "INSERT INTO votes (ts, team1, team2, champion, payload, name, ip_address, referrer_vote_id) VALUES (?,?,?,?,?,?,?,?)",
+            (ts, team1, team2, champion, json.dumps(payload) if payload else None, name, ip_address, referrer_vote_id),
         )
         return cur.lastrowid
 
@@ -115,4 +150,117 @@ def vote_summary(valid_teams: set[str] | None = None, top_n: int = 12) -> dict:
             ({"team": t, "count": n} for t, n in champ_counts.items()),
             key=lambda d: -d["count"],
         )[:top_n],
+    }
+
+def delete_vote(vote_id: int) -> int:
+    with _LOCK, _conn() as c:
+        cur = c.execute("DELETE FROM votes WHERE id=?", (int(vote_id),))
+        return cur.rowcount
+
+def clear_all_votes() -> int:
+    with _LOCK, _conn() as c:
+        cur = c.execute("DELETE FROM votes")
+        return cur.rowcount
+
+
+# ---------------------------------------------------------------------------
+# Admin auth
+# ---------------------------------------------------------------------------
+def verify_admin(username: str, password: str) -> bool:
+    with _LOCK, _conn() as c:
+        row = c.execute(
+            "SELECT password_hash, salt FROM admin_users WHERE username=?", (username,)
+        ).fetchone()
+    if not row:
+        return False
+    expected = hashlib.sha256((row["salt"] + password).encode()).hexdigest()
+    return secrets.compare_digest(expected, row["password_hash"])
+
+
+# ---------------------------------------------------------------------------
+# Share Link & Rate Limiting System
+# ---------------------------------------------------------------------------
+def has_voted_recently(ip: str) -> tuple[bool, int]:
+    """Check if IP voted in last 12 hours. Returns (voted, seconds_remaining)."""
+    if not ip:
+        return False, 0
+    with _LOCK, _conn() as c:
+        row = c.execute(
+            "SELECT ts FROM votes WHERE ip_address = ? ORDER BY ts DESC LIMIT 1",
+            (ip,)
+        ).fetchone()
+    if not row:
+        return False, 0
+    try:
+        last_ts = datetime.fromisoformat(row["ts"])
+    except Exception:
+        return False, 0
+    if last_ts.tzinfo is None:
+        last_ts = last_ts.replace(tzinfo=timezone.utc)
+    elapsed = datetime.now(timezone.utc) - last_ts
+    limit = timedelta(hours=12)
+    if elapsed < limit:
+        remaining = limit - elapsed
+        return True, int(remaining.total_seconds())
+    return False, 0
+
+
+def make_unique_name(requested_name: str) -> str:
+    requested_name = (requested_name or "").strip()
+    if not requested_name:
+        return "Anonymous"
+    with _LOCK, _conn() as c:
+        rows = c.execute("SELECT name FROM votes WHERE name IS NOT NULL").fetchall()
+    existing_lowercased = {r["name"].lower() for r in rows if r["name"]}
+    if requested_name.lower() not in existing_lowercased:
+        return requested_name
+    i = 1
+    while True:
+        candidate = f"{requested_name}{i}"
+        if candidate.lower() not in existing_lowercased:
+            return candidate
+        i += 1
+
+
+def get_shared_vote_details(vote_id: int) -> dict | None:
+    """Fetch referrer vote details, referred friends' votes, and the parent vote who referred the host."""
+    with _LOCK, _conn() as c:
+        ref_row = c.execute(
+            "SELECT id, name, team1, team2, champion, ts, referrer_vote_id FROM votes WHERE id = ?",
+            (int(vote_id),)
+        ).fetchone()
+        if not ref_row:
+            return None
+        
+        friend_rows = c.execute(
+            "SELECT id, name, team1, team2, champion, ts, referrer_vote_id FROM votes WHERE referrer_vote_id = ? ORDER BY ts ASC",
+            (int(vote_id),)
+        ).fetchall()
+        
+        parent = None
+        ref = dict(ref_row)
+        ref_finalists = {ref["team1"], ref["team2"]}
+        
+        if ref["referrer_vote_id"] is not None:
+            parent_row = c.execute(
+                "SELECT id, name, team1, team2, champion, ts FROM votes WHERE id = ?",
+                (int(ref["referrer_vote_id"]),)
+            ).fetchone()
+            if parent_row:
+                parent = dict(parent_row)
+                parent_finalists = {parent["team1"], parent["team2"]}
+                parent["match_count"] = len(ref_finalists.intersection(parent_finalists))
+        
+    friends = []
+    for fr in friend_rows:
+        fd = dict(fr)
+        fr_finalists = {fd["team1"], fd["team2"]}
+        intersection = ref_finalists.intersection(fr_finalists)
+        fd["match_count"] = len(intersection)
+        friends.append(fd)
+        
+    return {
+        "referrer": ref,
+        "friends": friends,
+        "parent": parent
     }

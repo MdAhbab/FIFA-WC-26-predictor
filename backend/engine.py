@@ -42,7 +42,7 @@ DATASETS = _HERE / 'datasets'
 DATA = _HERE / 'data'
 # Persisted artefacts (trained model) so the VM only pays the training cost once, ever.
 CACHE_DIR = _HERE / 'model_cache'
-MODEL_VERSION = 'hgb-poisson-v3'   # bump to invalidate the on-disk model cache (v3: anti-overfit features)
+MODEL_VERSION = 'hgb-poisson-v4'   # bump to invalidate the on-disk model cache (v4: full compressed features)
 
 def _find(*names):
     for n in names:
@@ -88,16 +88,24 @@ GAMMA_FALLBACK = 0.90
 #   (1) tanh-compress the Elo difference so extreme mismatches saturate instead of exploding, and
 #   (2) feed Elo to the model exactly ONCE (own_elo/opp_elo/elo_diff were three views of the same
 #       signal, giving Elo ~3x the importance it deserved).
-ELO_COMPRESS_SCALE = 300.0
+ELO_COMPRESS_SCALE  = 300.0   # elo diff (scale ~0-600)
+FIFA_COMPRESS_SCALE = 500.0   # fifa ranking pts diff (scale ~0-1000)
+FORM_COMPRESS_SCALE = 1.5     # form pts/match diff (scale ~0-3)
+AD_COMPRESS_SCALE   = 1.0     # attack-vs-defence diff (goals, scale ~0-2)
+
+
+def _compress(diff, scale):
+    """Map diff to (-1, 1) via tanh with the given scale."""
+    return float(np.tanh(diff / scale))
 
 
 def _compress_elo_diff(diff):
-    """Map an Elo difference to (-1, 1) via tanh: keeps direction & ordering, caps extremes."""
-    return float(np.tanh(diff / ELO_COMPRESS_SCALE))
+    """Backward-compatible helper used by the backtest and lambdas fallback."""
+    return _compress(diff, ELO_COMPRESS_SCALE)
 
 
-FEATURES = ['elo_diff_c', 'own_fifa', 'opp_fifa',
-            'own_form', 'opp_form', 'own_attack', 'opp_defence',
+FEATURES = ['elo_diff_c', 'fifa_diff_c', 'form_diff_c',
+            'own_attack', 'opp_defence', 'att_def_c',
             'is_home', 'neutral', 'is_world_cup']
 
 # ---------------------------------------------------------------------------
@@ -186,13 +194,18 @@ def build_training_xy(df):
             oe = getattr(r, f'{own}_elo_pre', np.nan); pe = getattr(r, f'{opp}_elo_pre', np.nan)
             if np.isnan(oe) or np.isnan(pe):
                 continue
+            of_ = getattr(r, f'{own}_fifa_points_filled', np.nan)
+            pf_ = getattr(r, f'{opp}_fifa_points_filled', np.nan)
+            ofm = getattr(r, f'{own}_form_points_per_match_last10', np.nan)
+            pfm = getattr(r, f'{opp}_form_points_per_match_last10', np.nan)
+            oat = getattr(r, f'{own}_avg_goals_for_last10', np.nan)
+            ode = getattr(r, f'{opp}_avg_goals_against_last10', np.nan)
+            fifa_d = _compress(of_ - pf_, FIFA_COMPRESS_SCALE) if not (np.isnan(of_) or np.isnan(pf_)) else 0.0
+            form_d = _compress(ofm - pfm, FORM_COMPRESS_SCALE) if not (np.isnan(ofm) or np.isnan(pfm)) else 0.0
+            ad_d = _compress(oat - ode, AD_COMPRESS_SCALE) if not (np.isnan(oat) or np.isnan(ode)) else 0.0
             feat = [_compress_elo_diff(oe - pe),
-                    getattr(r, f'{own}_fifa_points_filled', np.nan),
-                    getattr(r, f'{opp}_fifa_points_filled', np.nan),
-                    getattr(r, f'{own}_form_points_per_match_last10', np.nan),
-                    getattr(r, f'{opp}_form_points_per_match_last10', np.nan),
-                    getattr(r, f'{own}_avg_goals_for_last10', np.nan),
-                    getattr(r, f'{opp}_avg_goals_against_last10', np.nan),
+                    fifa_d, form_d,
+                    oat, ode, ad_d,
                     0 if bool(getattr(r, 'neutral', False)) else (1 if own == 'home' else 0),
                     1 if bool(getattr(r, 'neutral', False)) else 0,
                     int(bool(getattr(r, 'is_world_cup', 0)))]
@@ -228,7 +241,7 @@ def train_goal_model(df, use_cache: bool = True):
     # Regularised vs the original (depth 4 / leaf 40 / l2 1.0): shallower trees, bigger leaves and a
     # stronger weight penalty stop the model memorising the precise Elo->goals curve at extreme Elos.
     model = HistGradientBoostingRegressor(loss='poisson', max_depth=3, learning_rate=0.05,
-                                          max_iter=400, min_samples_leaf=60,
+                                          max_iter=500, min_samples_leaf=60,
                                           l2_regularization=2.0, random_state=42)
     model.fit(X, y)
     if use_cache:
@@ -250,10 +263,15 @@ def fixture_context(home, away):
 
 
 def _feat_row(own, opp, own_elo, opp_elo, state, is_home, neutral):
+    of_ = state[own]['fifa']; pf_ = state[opp]['fifa']
+    ofm = state[own]['form']; pfm = state[opp]['form']
+    oat = state[own]['gf']; ode = state[opp]['ga']
+    fifa_d = _compress(of_ - pf_, FIFA_COMPRESS_SCALE)
+    form_d = _compress(ofm - pfm, FORM_COMPRESS_SCALE)
+    ad_d = _compress(oat - ode, AD_COMPRESS_SCALE)
     return [_compress_elo_diff(own_elo - opp_elo),
-            state[own]['fifa'], state[opp]['fifa'],
-            state[own]['form'], state[opp]['form'],
-            state[own]['gf'], state[opp]['ga'],
+            fifa_d, form_d,
+            oat, ode, ad_d,
             is_home, neutral, 1]
 
 
@@ -458,13 +476,22 @@ def make_effective_elo(state, presets, pool=None):
 # ---------------------------------------------------------------------------
 # 6. Standings, best-thirds, slot resolution
 # ---------------------------------------------------------------------------
-def deterministic_standings(group_teams, group_df, eff, state, model, lam=None):
+def deterministic_standings(group_teams, group_df, eff, state, model, lam=None, official_results=None):
     """Order a group's 4 teams by expected points (continuous, no ties)."""
     pts = {t: 0.0 for t in group_teams}; gdv = {t: 0.0 for t in group_teams}
     sub = group_df[group_df.home_team.isin(group_teams) & group_df.away_team.isin(group_teams)]
     for r in sub.itertuples(index=False):
-        lh, la = lam[r.home_team][r.away_team] if lam else lambdas(r.home_team, r.away_team, eff, state, model)
-        ph, pd_, pa = outcome_probs(score_matrix(lh, la))
+        mid = int(r.match_id)
+        official = official_results.get(mid) if official_results else None
+        if official:
+            a, b = int(official['hg']), int(official['ag'])
+            ph = 1.0 if a > b else 0.0
+            pa = 1.0 if b > a else 0.0
+            pd_ = 1.0 if a == b else 0.0
+            lh, la = float(a), float(b)
+        else:
+            lh, la = lam[r.home_team][r.away_team] if lam else lambdas(r.home_team, r.away_team, eff, state, model)
+            ph, pd_, pa = outcome_probs(score_matrix(lh, la))
         pts[r.home_team] += 3 * ph + pd_; pts[r.away_team] += 3 * pa + pd_
         gdv[r.home_team] += lh - la; gdv[r.away_team] += la - lh
     return sorted(group_teams, key=lambda t: (pts[t], gdv[t]), reverse=True)
@@ -485,13 +512,13 @@ def allocate_best_thirds(qual_thirds, third_slots):
 # ---------------------------------------------------------------------------
 # 7. resolve(UserConfig) — the gamification core
 # ---------------------------------------------------------------------------
-USER_EDITABLE_KO = set(range(73, 97))   # R32 (73-88) + R16 (89-96)
+USER_EDITABLE_KO = set(range(73, 101))   # R32 (73-88) + R16 (89-96) + QF (97-100)
 
 def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratings):
     third_slots = [(int(r.match_id), parse_third_groups(r.slot_away))
                    for r in knock_df.itertuples(index=False) if 'Best 3rd' in str(r.slot_away)]
 
-    def resolve(user_config=None):
+    def resolve(user_config=None, official_results=None):
         cfg = user_config or {}
         warns = []
         eff = {t: effective_elo(t, cfg) for t in ratings}
@@ -508,17 +535,24 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
             lh, la = lam[r.home_team][r.away_team]
             M = score_matrix(lh, la); ph, pd_, pa = outcome_probs(M)
             grp = r.group
-            if grp in manual_orders:
-                o = manual_orders[grp]
-                hr = o.index(r.home_team) if r.home_team in o else 9
-                ar = o.index(r.away_team) if r.away_team in o else 9
-                wt = 'home' if hr < ar else 'away' if ar < hr else ('home' if ph >= max(pd_, pa) else 'away' if pa >= pd_ else 'draw')
+            
+            mid = int(r.match_id)
+            official = official_results.get(mid) if official_results else None
+            if official:
+                a, b = int(official['hg']), int(official['ag'])
+                wt = 'home' if a > b else 'away' if b > a else 'draw'
             else:
-                wt = 'home' if ph >= max(pd_, pa) else 'away' if pa >= pd_ else 'draw'
-            if (grp in manual_orders or score_mode == 'coherent') and wt in ('home', 'away', 'draw'):
-                a, b = best_scoreline_constrained(M, wt)
-            else:
-                a, b = best_scoreline(M)
+                if grp in manual_orders:
+                    o = manual_orders[grp]
+                    hr = o.index(r.home_team) if r.home_team in o else 9
+                    ar = o.index(r.away_team) if r.away_team in o else 9
+                    wt = 'home' if hr < ar else 'away' if ar < hr else ('home' if ph >= max(pd_, pa) else 'away' if pa >= pd_ else 'draw')
+                else:
+                    wt = 'home' if ph >= max(pd_, pa) else 'away' if pa >= pd_ else 'draw'
+                if (grp in manual_orders or score_mode == 'coherent') and wt in ('home', 'away', 'draw'):
+                    a, b = best_scoreline_constrained(M, wt)
+                else:
+                    a, b = best_scoreline(M)
             hg_.append(a); ag_.append(b); win_.append(wt)
             cor_.append(best_count(corners_mu(lh, la), 'corners'))
             yel_.append(best_count(yellow_mu(ph, pd_, pa), 'cards')); red_.append(0)
@@ -535,7 +569,7 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
             else:
                 if gc.get('mode') == 'manual':
                     warns.append(f'Group {g}: invalid manual order → using model')
-                order = deterministic_standings(gteams, group_df, eff, state, model, lam)
+                order = deterministic_standings(gteams, group_df, eff, state, model, lam, official_results=official_results)
             winners[g], runners[g], thirds[g] = order[0], order[1], order[2]
 
         # ---- best-8 thirds (rank by expected group points) ----
@@ -552,6 +586,16 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
         third_assign = allocate_best_thirds(qual, third_slots)
 
         # ---- knockout cascade ----
+        # Group-standing form boosts: 1st place +30 Elo, 2nd place +15 Elo into knockouts.
+        ko_eff = eff.copy()
+        for g in winners:
+            ko_eff[winners[g]] += 30
+            ko_eff[runners[g]] += 15
+        lam_ko = build_lambda_matrix(list(ratings), ko_eff, state, model)
+
+        # Per-goal micro-boost: +3 Elo per goal scored by the winner in each match.
+        # Very small signal that compounds across rounds — rewards clinical teams.
+        GOAL_ELO_BOOST = 3
         win_of, los_of = {}, {}
         def rslot(slot, mid):
             s = str(slot).strip()
@@ -568,28 +612,78 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
             mid = int(r.match_id)
             home = rslot(r.slot_home, mid)
             away = third_assign[mid] if 'Best 3rd' in str(r.slot_away) else rslot(r.slot_away, mid)
-            lh, la = lam[home][away]
+            lh, la = lam_ko[home][away]
             Aet = after_et_matrix(lh, la); M90 = score_matrix(lh, la)
             ph, pd_, pa = outcome_probs(M90)
-            pen_home = 1 / (1 + 10 ** (-(eff[home] - eff[away]) / 400))
+            pen_home = 1 / (1 + 10 ** (-(ko_eff[home] - ko_eff[away]) / 400))
             adv_home = ph + pd_ * pen_home
-            ko = cfg.get('knockout', {}).get(str(mid), {})
-            manual = (mid in USER_EDITABLE_KO and ko.get('mode') == 'manual')
-            if manual:
-                wt_name = ko.get('winner_team')
-                ws = 'home' if (wt_name == home or ko.get('winner_slot') == 'home') else 'away'
-                if wt_name and wt_name not in (home, away):
-                    warns.append(f'Match {mid}: manual winner {wt_name!r} not in {home} vs {away} → using model')
-                    ws = 'home' if adv_home >= 0.5 else 'away'
+            
+            official = official_results.get(mid) if official_results else None
+            # Check if official teams match the bracket teams (order independent)
+            if official and {official['home'], official['away']} == {home, away}:
+                if official['home'] == home:
+                    a, b = int(official['hg']), int(official['ag'])
+                    wt_name = official.get('winner_team')
+                    if (wt_name == home) or (wt_name is None and a > b):
+                        ws = 'home'
+                    elif (wt_name == away) or (wt_name is None and b > a):
+                        ws = 'away'
+                    else:
+                        ws = 'home' if adv_home >= 0.5 else 'away'
+                else:
+                    a, b = int(official['ag']), int(official['hg'])
+                    wt_name = official.get('winner_team')
+                    if (wt_name == home) or (wt_name is None and b > a):
+                        ws = 'home'
+                    elif (wt_name == away) or (wt_name is None and a > b):
+                        ws = 'away'
+                    else:
+                        ws = 'home' if adv_home >= 0.5 else 'away'
+                manual = True
+                ko = {}
             else:
-                ws = 'home' if adv_home >= 0.5 else 'away'
+                ko = cfg.get('knockout', {}).get(str(mid), {})
+                manual = (mid in USER_EDITABLE_KO and ko.get('mode') == 'manual')
+                if manual:
+                    wt_name = ko.get('winner_team')
+                    ws = 'home' if (wt_name == home or ko.get('winner_slot') == 'home') else 'away'
+                    if wt_name and wt_name not in (home, away):
+                        warns.append(f'Match {mid}: manual winner {wt_name!r} not in {home} vs {away} → using model')
+                        ws = 'home' if adv_home >= 0.5 else 'away'
+                else:
+                    ws = 'home' if adv_home >= 0.5 else 'away'
+            
             winner = home if ws == 'home' else away
             loser = away if ws == 'home' else home
             win_of[mid], los_of[mid] = winner, loser
-            if manual or score_mode == 'coherent':
+
+            # --- Scoreline: use explicit goal overrides if provided ---
+            user_hg = ko.get('home_goals')
+            user_ag = ko.get('away_goals')
+            if official and {official['home'], official['away']} == {home, away}:
+                # Goals already set in a, b above
+                pass
+            elif manual and user_hg is not None and user_ag is not None:
+                a, b = int(user_hg), int(user_ag)
+                # Swap if goals are backwards relative to the resolved winner
+                if ws == 'home' and a < b: a, b = b, a
+                if ws == 'away' and b < a: a, b = b, a
+            elif manual or score_mode == 'coherent':
                 a, b = best_scoreline_constrained(Aet, ws)
             else:
                 a, b = best_scoreline(Aet)
+
+            # --- Per-goal micro form boost for the winner going forward ---
+            if a == b:
+                # Shootout winner gets a flat +3 Elo boost
+                ko_eff[winner] = ko_eff.get(winner, 1600) + 1 * GOAL_ELO_BOOST
+            else:
+                winner_goals = a if ws == 'home' else b
+                ko_eff[winner] = ko_eff.get(winner, 1600) + winner_goals * GOAL_ELO_BOOST
+                
+            # Rebuild lambda row for next matches (only if not Final)
+            if mid < 104:
+                lam_ko = build_lambda_matrix(list(ratings), ko_eff, state, model)
             ph_t.append(home); pa_t.append(away); hg2.append(a); ag2.append(b)
             cor2.append(best_count(corners_mu(lh, la, True), 'corners'))
             yel2.append(best_count(yellow_mu(ph, pd_, pa, True), 'cards')); red2.append(0)
@@ -666,7 +760,7 @@ def _rslot_sim(slot, mid, winners, runners, third_assign, win_of, los_of):
     return s
 
 
-def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=None):
+def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=None, official_results=None, group_mids=None):
     """Play one full tournament. Group games sample Poisson(λ) scorelines (so goal difference is
     realistic for tie-breaks); knockout ties resolve from Dixon-Coles win/draw/loss probabilities,
     with draws settled by a near coin-flip shootout (real shootouts are ~50/50). Returns win_of."""
@@ -677,8 +771,18 @@ def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=N
         for i in range(n):
             for j in range(i + 1, n):
                 h, a = gteams[i], gteams[j]
-                lh, la = lam[h][a]
-                hg, ag = int(rng.poisson(lh)), int(rng.poisson(la))
+                mid = group_mids.get((h, a)) if group_mids else None
+                official = official_results.get(mid) if (official_results and mid) else None
+                if official:
+                    oh, oa = official['home'], official['away']
+                    ohg, oag = int(official['hg']), int(official['ag'])
+                    if oh == h:
+                        hg, ag = ohg, oag
+                    else:
+                        hg, ag = oag, ohg
+                else:
+                    lh, la = lam[h][a]
+                    hg, ag = int(rng.poisson(lh)), int(rng.poisson(la))
                 gf[h] += hg; gf[a] += ag; gd[h] += hg - ag; gd[a] += ag - hg
                 if hg > ag: pts[h] += 3
                 elif ag > hg: pts[a] += 3
@@ -697,11 +801,23 @@ def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=N
         home = _rslot_sim(r.slot_home, mid, winners, runners, third_assign, win_of, los_of)
         away = (third_assign[mid] if 'Best 3rd' in str(r.slot_away)
                 else _rslot_sim(r.slot_away, mid, winners, runners, third_assign, win_of, los_of))
-        ph, pdr, pa = P[home][away]
-        # draws go to a shootout with only a whisper of a skill edge (shootouts are ~coin-flips)
-        pen_home = 0.5 + 0.1 * (ph - pa)
-        adv_home = ph + pdr * pen_home
-        w, l = (home, away) if rng.random() < adv_home else (away, home)
+        
+        official = official_results.get(mid) if official_results else None
+        if official and {official['home'], official['away']} == {home, away}:
+            oh, oa = official['home'], official['away']
+            ohg, oag = int(official['hg']), int(official['ag'])
+            wt_name = official.get('winner_team')
+            if wt_name:
+                w = wt_name
+            else:
+                w = home if ((oh == home and ohg > oag) or (oa == home and oag > ohg)) else away
+            l = away if w == home else home
+        else:
+            ph, pdr, pa = P[home][away]
+            # draws go to a shootout with only a whisper of a skill edge (shootouts are ~coin-flips)
+            pen_home = 0.5 + 0.1 * (ph - pa)
+            adv_home = ph + pdr * pen_home
+            w, l = (home, away) if rng.random() < adv_home else (away, home)
         win_of[mid], los_of[mid] = w, l
     return win_of, winners, runners
 
@@ -710,17 +826,25 @@ def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=N
 _R32, _R16, _QF, _SF, _FINAL = range(73, 89), range(89, 97), range(97, 101), (101, 102), 104
 
 
-def champion_probabilities(lam, groups, knock_df, n_sims=4000, seed=12345):
+def champion_probabilities(lam, groups, knock_df, n_sims=4000, seed=12345, official_results=None, group_df=None):
     """Run the Monte-Carlo and aggregate per-team round-reach + title probabilities."""
     third_slots = _third_slots_of(knock_df)
     knock_rows = list(knock_df.itertuples(index=False))
     P = build_prob_matrix(lam)
     rng = np.random.default_rng(seed)
     teams = list(lam.keys())
+    
+    # Build group match ID lookup
+    group_mids = {}
+    if group_df is not None:
+        for r in group_df.itertuples(index=False):
+            group_mids[(r.home_team, r.away_team)] = int(r.match_id)
+            group_mids[(r.away_team, r.home_team)] = int(r.match_id)
+
     champ = {t: 0 for t in teams}; final = {t: 0 for t in teams}
     semi = {t: 0 for t in teams}; qf = {t: 0 for t in teams}; r16 = {t: 0 for t in teams}
     for _ in range(n_sims):
-        win_of, _w, _r = simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows)
+        win_of, _w, _r = simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows, official_results, group_mids)
         for m in _R32:
             if m in win_of: r16[win_of[m]] += 1
         for m in _R16:

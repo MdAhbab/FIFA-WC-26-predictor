@@ -66,7 +66,8 @@ export default function Predictions() {
               </div>
               <div className="mono text-xs uppercase tracking-wider text-muted-foreground">
                 {ml.final.date} · {ml.final.venue}{" "}
-                {ml.final.penalties && "· decided on penalties"}
+                {ml.final.homeGoals === ml.final.awayGoals &&
+                  `· ${ml.final.winnerTeam.name} won on penalties`}
               </div>
             </div>
           </div>
@@ -200,10 +201,14 @@ function GroupCard({
                         round: `Group ${letter}`,
                         date: m.date,
                         venue: m.venue,
+                        matchId: competitionMatchId(m.matchId),
                       })
                     }
-                    className="w-full grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-sm rounded-md border border-foreground/10 bg-background/60 px-2 py-1.5 hover:border-foreground/30 transition-colors text-left"
+                    className="relative w-full grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-sm rounded-md border border-foreground/10 bg-background/60 px-2 py-1.5 hover:border-foreground/30 transition-colors text-left"
                   >
+                    <span className="absolute right-1.5 top-0.5 mono text-[8px] text-muted-foreground/70">
+                      #{competitionMatchId(m.matchId)}
+                    </span>
                     <TeamBadge name={m.home.name} iso={m.home.iso} size={20} />
                     <span className="mono tabular-nums text-center flex items-center gap-1 justify-center">
                       {m.official && (
@@ -233,6 +238,14 @@ function GroupCard({
   );
 }
 
+// Competition match id (1-104) from the bracket's internal id: groups are "G{n}", knockouts "K{n}"
+// (R32 73-88, R16 89-96, QF 97-100, SF 101-102, Final 104).
+function competitionMatchId(idStr: string): number {
+  if (idStr.startsWith("G")) return parseInt(idStr.slice(1), 10);
+  const n = parseInt(idStr.replace("K", ""), 10);
+  return n === 31 ? 104 : 72 + n;
+}
+
 function KnockoutColumn({
   title,
   matches,
@@ -250,6 +263,8 @@ function KnockoutColumn({
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {matches.map((m) => {
           const homeWin = m.winner === "home";
+          // Level KO scoreline => decided on penalties (the advancing team's badge stays highlighted).
+          const isLevel = m.homeGoals === m.awayGoals;
           return (
             <button
               type="button"
@@ -263,15 +278,23 @@ function KnockoutColumn({
                   round: title,
                   date: m.date,
                   venue: m.venue,
+                  matchId: competitionMatchId(m.matchId),
                 })
               }
               className="text-left w-full rounded-md border border-foreground/15 bg-card px-3 py-2 hover:border-foreground/40 transition-colors"
             >
               <div className="flex items-center justify-between text-[10px] mono uppercase tracking-wider text-muted-foreground mb-1">
                 <span>×{m.multiplier}</span>
-                {m.penalties && (
-                  <span style={{ color: "var(--stamp-red)" }}>pens</span>
-                )}
+                <span className="flex items-center gap-1.5">
+                  {isLevel && (
+                    <span style={{ color: "var(--stamp-red)" }}>
+                      pens · {m.winnerTeam.name}
+                    </span>
+                  )}
+                  <span className="rounded border border-foreground/20 px-1">
+                    #{competitionMatchId(m.matchId)}
+                  </span>
+                </span>
               </div>
               <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 text-sm">
                 <TeamBadge
@@ -281,11 +304,11 @@ function KnockoutColumn({
                   className={homeWin ? "" : "opacity-50"}
                 />
                 <span className="mono tabular-nums text-center">
-                  <span className={homeWin ? "" : "opacity-50"}>
+                  <span className={isLevel || homeWin ? "" : "opacity-50"}>
                     {m.homeGoals}
                   </span>
                   <span className="text-muted-foreground"> – </span>
-                  <span className={homeWin ? "opacity-50" : ""}>
+                  <span className={isLevel || !homeWin ? "" : "opacity-50"}>
                     {m.awayGoals}
                   </span>
                 </span>

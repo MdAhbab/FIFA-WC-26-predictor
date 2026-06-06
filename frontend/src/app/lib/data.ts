@@ -69,10 +69,11 @@ export async function bootstrap(): Promise<{
   return { votes: d.votes, session: d.session };
 }
 
-/** Recompute predictions under team bias / custom squads (player picks). */
+/** Recompute predictions under team bias / custom squads / knockout goal overrides. */
 export async function applyStrength(cfg: {
   team_bias?: Record<string, number>;
   squads?: Record<string, unknown>;
+  knockout_goals?: Record<string, { home: number; away: number }>;
 }) {
   const d = await api.strength(cfg);
   applyPayload(d);

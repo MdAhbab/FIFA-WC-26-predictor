@@ -30,6 +30,7 @@ import type {
 export interface PicksState {
   groupOrder: Record<string, string[]>; // group letter -> 4 team names (pos1..pos4)
   knockoutPicks: Record<string, "home" | "away">; // matchId -> side
+  knockoutGoals: Record<string, { home: number; away: number }>; // matchId -> goals
   bias: Record<string, number>; // team -> bias level 1..5
   squads: Record<string, PoolPlayer[]>; // team -> custom selected players
   nonce: number; // bumped after a strength recompute to force re-derive
@@ -41,6 +42,7 @@ type Action =
   | { type: "SET_GROUP_ORDER"; group: string; teams: string[] }
   | { type: "SWAP_GROUP"; group: string; from: number; to: number }
   | { type: "SET_KO_WINNER"; matchId: string; side: "home" | "away" }
+  | { type: "SET_KO_GOALS"; matchId: string; home: number; away: number }
   | { type: "CLEAR_KO"; matchIds: string[] }
   | { type: "SET_BIAS"; team: string; level: number }
   | { type: "SET_SQUAD"; team: string; players: PoolPlayer[] }
@@ -71,6 +73,7 @@ function defaultState(): PicksState {
   return {
     groupOrder,
     knockoutPicks: {},
+    knockoutGoals: {},
     bias: {},
     squads: {},
     nonce: 0,
@@ -126,6 +129,11 @@ function reducer(state: PicksState, action: Action): PicksState {
           [action.matchId]: action.side,
         },
       };
+    case "SET_KO_GOALS": {
+      const knockoutGoals = { ...state.knockoutGoals };
+      knockoutGoals[action.matchId] = { home: action.home, away: action.away };
+      return { ...state, knockoutGoals };
+    }
     case "CLEAR_KO": {
       const next = { ...state.knockoutPicks };
       action.matchIds.forEach((id) => delete next[id]);
@@ -442,6 +450,7 @@ interface Ctx {
   setGroupOrder: (group: string, teams: string[]) => void;
   swapGroup: (group: string, from: number, to: number) => void;
   setKoWinner: (matchId: string, side: "home" | "away") => void;
+  setKoGoals: (matchId: string, goals: { home: number; away: number }) => void;
   setBias: (team: string, level: number) => void;
   setSquad: (team: string, players: PoolPlayer[]) => void;
   applyStrength: () => Promise<void>;
@@ -463,23 +472,29 @@ export function PicksProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<PicksState>;
-        // sanity: every group must have 4 team names that exist in the real field
-        const groupOrder = parsed.groupOrder ?? {};
-        const ok =
-          Object.keys(groupOrder).length === GROUP_LETTERS.length &&
-          Object.entries(groupOrder).every(
-            ([, names]) =>
-              names.length === 4 && names.every((n) => !!teamByName(n)),
-          );
-        if (ok) {
+        if (parsed) {
           const base = defaultState();
+          const groupOrder = { ...base.groupOrder };
+          if (parsed.groupOrder) {
+            for (const [g, names] of Object.entries(parsed.groupOrder)) {
+              if (
+                Array.isArray(names) &&
+                names.length === 4 &&
+                names.every((n) => !!teamByName(n))
+              ) {
+                groupOrder[g] = names;
+              }
+            }
+          }
           dispatch({
             type: "HYDRATE",
             state: {
               ...base,
               ...parsed,
+              groupOrder,
               bias: parsed.bias ?? {},
               squads: parsed.squads ?? {},
+              knockoutGoals: parsed.knockoutGoals ?? {},
               nonce: parsed.nonce ?? 0,
             } as PicksState,
           });
@@ -519,6 +534,12 @@ export function PicksProvider({ children }: { children: ReactNode }) {
     (matchId: string, side: "home" | "away") => {
       dispatch({ type: "SET_KO_WINNER", matchId, side });
       triggerKick();
+    },
+    [],
+  );
+  const setKoGoals = useCallback(
+    (matchId: string, goals: { home: number; away: number }) => {
+      dispatch({ type: "SET_KO_GOALS", matchId, home: goals.home, away: goals.away });
     },
     [],
   );
@@ -568,16 +589,24 @@ export function PicksProvider({ children }: { children: ReactNode }) {
           autofill_rest: true,
         };
       }
+      // Build knockout goal overrides for the strength payload
+      const knockoutGoalsPayload: Record<string, { home: number; away: number }> = {};
+      for (const [matchId, goals] of Object.entries(state.knockoutGoals)) {
+        const num = parseInt(matchId.replace("K", ""), 10);
+        const realId = num === 31 ? 104 : 72 + num;
+        knockoutGoalsPayload[String(realId)] = goals;
+      }
       await applyStrengthData({
         team_bias: state.bias,
         squads: squadsPayload,
+        knockout_goals: knockoutGoalsPayload,
       });
       dispatch({ type: "BUMP" });
       triggerKick();
     } finally {
       setApplying(false);
     }
-  }, [state.bias, state.squads]);
+  }, [state.bias, state.squads, state.knockoutGoals]);
 
   const value: Ctx = {
     state,
@@ -586,6 +615,7 @@ export function PicksProvider({ children }: { children: ReactNode }) {
     setGroupOrder,
     swapGroup,
     setKoWinner,
+    setKoGoals,
     setBias,
     setSquad,
     applyStrength,

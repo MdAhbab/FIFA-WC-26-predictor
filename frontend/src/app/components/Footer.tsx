@@ -4,7 +4,8 @@ import { CONTACT_EMAIL } from "../lib/site";
 
 export function Footer() {
   return (
-    <footer className="mt-16 border-t-2 border-foreground/15">
+    <>
+      <footer className="mt-16 border-t-2 border-foreground/15">
       <div className="halftone h-2" aria-hidden />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
         <img
@@ -55,5 +56,17 @@ export function Footer() {
         </div>
       </div>
     </footer>
+    {/* Discreet admin link — not indexed, not in nav */}
+    <div className="text-center pb-3">
+      <Link
+        to="/admin"
+        className="text-[10px] text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+        tabIndex={-1}
+        aria-hidden
+      >
+        ·
+      </Link>
+    </div>
+    </>
   );
 }

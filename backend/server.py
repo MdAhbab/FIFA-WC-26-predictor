@@ -20,6 +20,28 @@ import threading
 from collections import OrderedDict
 from pathlib import Path
 
+
+def _load_dotenv(path: Path) -> None:
+    """Minimal stdlib .env loader, run before any module reads os.environ. Keeps secrets (the NewsAPI
+    key, admin token) out of source and git; a real process-manager/Docker env var always wins."""
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = val
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass
+
+
+_load_dotenv(Path(__file__).resolve().parent / ".env")
+
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -30,11 +52,14 @@ import db
 import engine as E
 import news
 import sessions
+import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 DIST = HERE.parent / "frontend" / "dist"
 
-ADMIN_TOKEN = os.environ.get("WC_ADMIN_TOKEN", "")          # set this to enable official-result writes
+ADMIN_TOKEN = os.environ.get("WC_ADMIN_TOKEN", "dev_admin_token")
+if ADMIN_TOKEN == "dev_admin_token":
+    print("[warning] WC_ADMIN_TOKEN not set. Defaulting to 'dev_admin_token' for development.")          # set this to enable official-result writes
 MC_BASE_SIMS = int(os.environ.get("WC_MC_SIMS", "4000"))    # full sim for the cached base payload
 MC_TUNE_SIMS = int(os.environ.get("WC_MC_SIMS_TUNE", "1500"))  # lighter sim for live tweaks
 MAX_COMPUTE = int(os.environ.get("WC_MAX_COMPUTE", "4"))    # concurrent heavy recomputes
@@ -97,7 +122,9 @@ def _load_results():
         _RESULTS[r['match_id']] = {
             'match_id': r['match_id'], 'stage': r['stage'], 'home': r['home_team'],
             'away': r['away_team'], 'hg': r['home_goals'], 'ag': r['away_goals'],
-            'locked': bool(r['locked'])}
+            'locked': bool(r['locked']),
+            'winner_team': r.get('winner_team')
+        }
     _rebuild_state_from_results()
 
 
@@ -118,8 +145,14 @@ def _pairwise(eff, lam):
             pen_home = 1 / (1 + 10 ** (-(eff[h] - eff[a]) / 400))
             adv_home = ph + pdr * pen_home
             winner = "home" if adv_home >= 0.5 else "away"
-            hg, ag = E.best_scoreline_constrained(M, winner)
+            # A knockout cannot end level in regulation: if a shootout is the likely outcome we show a
+            # COHERENT level scoreline (e.g. 1-1) + the advancer, instead of a decisive score with a
+            # contradictory "PENS" tag. The frontend renders "1-1 (TEAM win on penalties)".
             penalties = bool(pdr >= 0.30 and abs(ph - pa) < 0.07)
+            if penalties:
+                hg, ag = E.best_scoreline_constrained(M, "draw")   # most-likely level score
+            else:
+                hg, ag = E.best_scoreline_constrained(M, winner)   # decisive score matching the advancer
             out[h][a] = {
                 "homeGoals": int(hg), "awayGoals": int(ag), "winner": winner,
                 "penalties": penalties,
@@ -146,7 +179,11 @@ def _group_forecasts(gp, eff, lam):
                 winner = 'home' if hg > ag else 'away' if ag > hg else 'draw'
             else:
                 hg, ag = int(r.predicted_home_goals), int(r.predicted_away_goals)
-                winner = r.winning_team
+                # App display is COHERENT (unlike the EV-optimal competition submission, where the
+                # argmax winning_team is scored independently of the scoreline): derive the shown
+                # winner from the predicted score so a 1-1 reads "Draw" and matches the standings
+                # table below, which already awards both teams a point for a level score.
+                winner = 'home' if hg > ag else 'away' if ag > hg else 'draw'
             matches.append({
                 "matchId": f"G{mid}", "home": raw_team(r.home_team, eff),
                 "away": raw_team(r.away_team, eff), "homeGoals": hg, "awayGoals": ag,
@@ -172,9 +209,25 @@ def build_payload(config: dict | None = None, n_sims: int = MC_BASE_SIMS):
     config = config or {}
     eff = {t: ENG['effective_elo'](t, config) for t in ENG['teams']}
     lam = E.build_lambda_matrix(ENG['teams'], eff, ENG['state'], ENG['model'])
-    gp, kp, bv = ENG['resolve'](config)
+    gp, kp, bv = ENG['resolve'](config, official_results=_RESULTS)
     teams = sorted((raw_team(t, eff) for t in ENG['teams']), key=lambda d: -d["elo"])
-    cp = E.champion_probabilities(lam, ENG['groups'], ENG['knock_df'], n_sims=n_sims)
+    
+    mp = HERE / 'datasets' / 'market_probabilities.csv'
+    if mp.exists():
+        m = pd.read_csv(mp).sort_values('champion_probability', ascending=False)
+        cp = []
+        for _, r in m.head(32).iterrows():
+            cp.append({
+                'team': r['team'],
+                'champion': float(r['champion_probability']),
+                'final': float(r.get('final_probability', 0)),
+                'semi': float(r.get('semi_final_probability', 0)),
+                'quarter': float(r.get('quarter_final_probability', 0)),
+                'r16': float(r.get('round_of_16_probability', 0))
+            })
+    else:
+        cp = E.champion_probabilities(lam, ENG['groups'], ENG['knock_df'], n_sims=n_sims, official_results=_RESULTS, group_df=ENG['group_df'])
+
     title_race = [{"team": d["team"], "iso": iso(d["team"]), "prob": d["champion"],
                    "final": d["final"], "semi": d["semi"], "quarter": d["quarter"], "r16": d["r16"]}
                   for d in cp]
@@ -232,12 +285,15 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 class StrengthReq(BaseModel):
     team_bias: dict[str, int] | None = None
     squads: dict[str, dict] | None = None
+    knockout_goals: dict[str, dict] | None = None  # matchId -> {home: int, away: int}
 
 
 class VoteReq(BaseModel):
     team1: str
     team2: str
     champion: str | None = None
+    name: str | None = None
+    referrer_vote_id: int | None = None
     payload: dict | None = None
 
 
@@ -249,6 +305,7 @@ class ResultReq(BaseModel):
     away_goals: int
     stage: str = "group"
     locked: bool = True
+    winner_team: str | None = None
 
 
 def _attach_session(request: Request, response: Response) -> str:
@@ -290,6 +347,20 @@ def strength(req: StrengthReq, request: Request, response: Response):
                             if k in VALID_TEAMS and 1 <= int(v) <= 5}
     if req.squads:
         cfg["squads"] = {k: v for k, v in req.squads.items() if k in VALID_TEAMS}
+    if req.knockout_goals:
+        # Build knockout config entries from goal overrides
+        ko_cfg = cfg.setdefault("knockout", {})
+        for mid_str, goals in req.knockout_goals.items():
+            try:
+                mid = int(mid_str)
+                if 73 <= mid <= 100:  # R32/R16/QF only
+                    entry = ko_cfg.setdefault(str(mid), {"mode": "manual"})
+                    if "winner_team" not in entry:
+                        entry["mode"] = "manual"  # auto-mode: engine decides winner, uses goals
+                    entry["home_goals"] = int(goals.get("home", 0))
+                    entry["away_goals"] = int(goals.get("away", 0))
+            except (ValueError, TypeError):
+                pass
     sid = _attach_session(request, response)
     sessions.set_config(sid, cfg)
     return get_payload(cfg, MC_TUNE_SIMS)
@@ -312,7 +383,7 @@ def players(team: str):
 
 
 @app.get("/api/match")
-def match(home: str, away: str):
+def match(home: str, away: str, match_id: int | None = None):
     if home not in VALID_TEAMS or away not in VALID_TEAMS:
         raise HTTPException(404, "Unknown team(s).")
     if home == away:
@@ -322,9 +393,12 @@ def match(home: str, away: str):
     M = E.score_matrix(lh, la)
     ph, pdr, pa = E.outcome_probs(M)
     hg, ag = E.best_scoreline(M)
-    related = news.for_match(home, away)
+    # A match is "finalised" once an official result is recorded for its id: its news freezes.
+    finalized = bool(match_id is not None and int(match_id) in _RESULTS)
+    related = news.for_match(home, away, finalized=finalized)
     return {
         "home": raw_team(home, eff), "away": raw_team(away, eff),
+        "matchId": match_id, "finalized": finalized,
         "probabilities": {"home": round(ph, 4), "draw": round(pdr, 4), "away": round(pa, 4)},
         "predicted": {"homeGoals": int(hg), "awayGoals": int(ag),
                       "lambdaHome": round(lh, 2), "lambdaAway": round(la, 2)},
@@ -345,16 +419,58 @@ def results():
     return {"results": list(_RESULTS.values()), "count": len(_RESULTS)}
 
 
+def normalize_team_name(name: str | None) -> str | None:
+    if not name:
+        return None
+    name_clean = name.strip().lower()
+    for t in VALID_TEAMS:
+        if t.lower() == name_clean:
+            return t
+    return None
+
+
 @app.post("/api/vote")
-def vote(req: VoteReq):
-    t1, t2 = req.team1, req.team2
-    if t1 not in VALID_TEAMS or t2 not in VALID_TEAMS:
-        raise HTTPException(400, "Both teams must be valid World Cup teams.")
+def vote(req: VoteReq, request: Request):
+    t1 = normalize_team_name(req.team1)
+    t2 = normalize_team_name(req.team2)
+    if not t1 or not t2:
+        raise HTTPException(400, "Both teams must be valid participating World Cup teams.")
     if t1 == t2:
         raise HTTPException(400, "Pick two different teams.")
-    ch = req.champion if req.champion in VALID_TEAMS else None
-    db.add_vote(t1, t2, ch, req.payload)
-    return db.vote_summary(VALID_TEAMS)
+    
+    ip = request.headers.get("X-Forwarded-For")
+    if ip:
+        ip = ip.split(",")[0].strip()
+    else:
+        ip = request.client.host if request.client else "127.0.0.1"
+
+    voted, rem_secs = db.has_voted_recently(ip)
+    if voted:
+        h = rem_secs // 3600
+        m = (rem_secs % 3600) // 60
+        raise HTTPException(
+            status_code=429,
+            detail=f"You have already voted in the last 12 hours from this IP. Next vote available in {h}h {m}m."
+        )
+    
+    resolved_name = db.make_unique_name(req.name)
+    ch = normalize_team_name(req.champion) if req.champion else None
+    vote_id = db.add_vote(t1, t2, ch, req.payload, name=resolved_name, ip_address=ip, referrer_vote_id=req.referrer_vote_id)
+    
+    return {
+        "ok": True,
+        "vote_id": vote_id,
+        "name": resolved_name,
+        "votes": db.vote_summary(VALID_TEAMS)
+    }
+
+
+@app.get("/api/vote/shared/{vote_id}")
+def vote_shared(vote_id: int):
+    data = db.get_shared_vote_details(vote_id)
+    if not data:
+        raise HTTPException(404, "Shared vote not found.")
+    return data
 
 
 @app.get("/api/votes")
@@ -363,21 +479,38 @@ def votes():
 
 
 # ---- Admin: finalised official results (continual learning) ----
+class LoginReq(BaseModel):
+    username: str
+    password: str
+
+
 def _require_admin(token: str):
     if not ADMIN_TOKEN or token != ADMIN_TOKEN:
         raise HTTPException(403, "Admin token required.")
 
 
+@app.post("/api/admin/login")
+def admin_login(req: LoginReq):
+    if db.verify_admin(req.username, req.password):
+        # Return the server-side ADMIN_TOKEN so the client can use it for subsequent calls
+        return {"ok": True, "token": ADMIN_TOKEN, "username": req.username}
+    raise HTTPException(401, "Invalid credentials.")
+
+
 @app.post("/api/admin/result")
 def admin_result(req: ResultReq, x_admin_token: str = Header(default="")):
     _require_admin(x_admin_token)
-    if req.home_team not in VALID_TEAMS or req.away_team not in VALID_TEAMS:
+    home = normalize_team_name(req.home_team)
+    away = normalize_team_name(req.away_team)
+    if not home or not away:
         raise HTTPException(400, "Both teams must be valid World Cup teams.")
     if req.home_goals < 0 or req.away_goals < 0:
         raise HTTPException(400, "Scores must be non-negative.")
-    db.upsert_official_result(req.match_id, req.stage, req.home_team, req.away_team,
-                              req.home_goals, req.away_goals, req.locked)
+    winner = normalize_team_name(req.winner_team) if req.winner_team else None
+    db.upsert_official_result(req.match_id, req.stage, home, away,
+                              req.home_goals, req.away_goals, req.locked, winner_team=winner)
     _load_results()
+    news.invalidate()               # refresh live news + freeze the now-finalised match's card
     get_payload({}, MC_BASE_SIMS)   # re-warm base payload with the new result baked in
     return {"ok": True, "count": len(_RESULTS), "generation": _GEN}
 
@@ -387,8 +520,27 @@ def admin_delete_result(match_id: int, x_admin_token: str = Header(default="")):
     _require_admin(x_admin_token)
     db.delete_official_result(match_id)
     _load_results()
+    news.invalidate()               # un-freeze the match's card + refresh the live rail
     get_payload({}, MC_BASE_SIMS)
     return {"ok": True, "count": len(_RESULTS), "generation": _GEN}
+
+
+@app.post("/api/admin/vote_inject")
+def admin_inject_vote(req: VoteReq, count: int = 1, x_admin_token: str = Header(default="")):
+    _require_admin(x_admin_token)
+    t1 = normalize_team_name(req.team1) or ""
+    t2 = normalize_team_name(req.team2) or ""
+    ch = normalize_team_name(req.champion) if req.champion else None
+    for _ in range(count):
+        db.add_vote(t1, t2, ch, req.payload)
+    return db.vote_summary(VALID_TEAMS)
+
+
+@app.delete("/api/admin/votes/clear")
+def admin_clear_votes(x_admin_token: str = Header(default="")):
+    _require_admin(x_admin_token)
+    deleted = db.clear_all_votes()
+    return {"ok": True, "deleted": deleted}
 
 
 # ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ export default function Methodology() {
   useSEO({
     title: "Methodology · FIFA World Cup '26 Predictor",
     description:
-      "How the FIFA World Cup '26 Predictor engine works: 2022–2026 international data, Elo, Poisson goal model, and Monte-Carlo simulations.",
+      "How the FIFA World Cup '26 Predictor engine works: 2014–2026 international data, tanh-compressed Elo, Poisson goal model, tournament-form bias, and pre-computed championship probabilities.",
   });
 
   return (
@@ -21,49 +21,80 @@ export default function Methodology() {
         <p>
           The FIFA World Cup '26 Predictor was trained on{" "}
           <strong className="text-foreground">
-            ~3,800 senior international matches played between 2022 and 2026
+            ~12,000 senior international matches played between 2014 and 2026
           </strong>{" "}
-          — friendlies, Nations Leagues, continental finals, qualifiers and the
-          2022 World Cup itself. We deliberately kept the training window short
-          and recent so the model reflects the squads, tactics and form on the
-          pitch right now, not who looked good a decade ago.
+          — friendlies, Nations Leagues, continental championships, qualifiers,
+          and the 2018, 2022 World Cups. The extended window captures the
+          full modern era of international football while keeping the model
+          grounded in current squads and tactics.
         </p>
 
         <Section title="Features the model sees">
+          <p className="mb-3">
+            A key design decision was keeping the feature set{" "}
+            <strong className="text-foreground">tight and non-redundant</strong>.
+            Each signal is compressed through a{" "}
+            <strong className="text-foreground">tanh function</strong> before
+            being fed to the model, which prevents extreme Elo gaps (e.g. Spain
+            vs. a minnow) from dominating predictions and causing overfitting.
+          </p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li>
-              Pre-match Elo rating for each side, updated after every fixture
-              the model has seen.
+              <strong className="text-foreground">elo_diff_c</strong> — tanh-compressed
+              Elo rating difference between the two teams (single, non-redundant signal).
             </li>
             <li>
-              Rolling weighted form (goals for and against over the previous 10
-              matches, exponentially decayed).
+              <strong className="text-foreground">fifa_diff_c</strong> — tanh-compressed
+              FIFA ranking points difference.
             </li>
             <li>
-              FIFA world ranking points and confederation strength priors.
+              <strong className="text-foreground">form_diff_c</strong> — tanh-compressed
+              recent form difference (goals for/against over the last 10 matches,
+              exponentially decayed).
             </li>
             <li>
-              Venue effects — home advantage, neutrality, altitude where it
-              matters.
+              <strong className="text-foreground">own_attack / opp_defence</strong> — raw
+              attacking output and defensive solidity for each side.
             </li>
             <li>
-              Squad availability flags for the squad named on the deadline.
+              <strong className="text-foreground">att_def_c</strong> — combined
+              attack-vs-defence interaction signal.
+            </li>
+            <li>
+              <strong className="text-foreground">is_home / neutral / is_world_cup</strong> —
+              venue and competition-type flags.
             </li>
           </ul>
         </Section>
 
         <Section title="Goal model">
           <p>
-            Expected goals come from a{" "}
+            Expected goals are produced by a{" "}
             <strong className="text-foreground">
-              gradient-boosted Poisson regressor
+              Histogram Gradient-Boosted Poisson regressor
             </strong>{" "}
-            (a histogram gradient-boosting model with a Poisson objective) trained in long format —
-            one row per team per match. Those expected goals are turned into a full scoreline
-            distribution with a{" "}
-            <strong className="text-foreground">Dixon–Coles</strong> adjustment that corrects the
-            low-score correlation real football shows, so we get the probability of every plausible
-            scoreline, not just a winner.
+            — shallow trees (max depth 3), moderate L2 regularisation, trained
+            in long format (one row per team per match). The Poisson objective
+            naturally models football's count-based scoring. Expected goals
+            are then turned into a full scoreline matrix using a{" "}
+            <strong className="text-foreground">Dixon–Coles</strong> correction
+            that accounts for the real-world correlation seen in low-scoring
+            results (0–0, 1–0, 0–1, 1–1).
+          </p>
+        </Section>
+
+        <Section title="Tournament-form bias">
+          <p>
+            Once group stage results are resolved, teams carry a{" "}
+            <strong className="text-foreground">World Cup form boost</strong>{" "}
+            into the knockout rounds. Group winners receive a{" "}
+            <strong className="text-foreground">+30 Elo</strong> bonus and
+            runners-up receive{" "}
+            <strong className="text-foreground">+15 Elo</strong>, reflecting
+            the momentum that in-tournament performance gives a squad. The
+            lambda (expected goals) matrix for knockouts is rebuilt from these
+            adjusted ratings, so a surprise group winner will genuinely punch
+            above their base Elo in the Round of 32.
           </p>
         </Section>
 
@@ -75,31 +106,36 @@ export default function Methodology() {
             </strong>{" "}
             — the result that minimises Brier-score across the joint
             distribution, rather than the single most likely cell. Knockout
-            draws are decided on penalties, weighted slightly toward the higher
-            Elo with noise.
+            draws are resolved through an after-extra-time matrix; penalty
+            shootout probability is weighted by Elo with realistic noise.
           </p>
         </Section>
 
         <Section title="The title race">
           <p>
-            The champion / finalist / semi-finalist probabilities you see on the cover come from{" "}
-            <strong className="text-foreground">thousands of Monte-Carlo simulations</strong> of the
-            entire 104-match tournament. Each run samples real scorelines from the goal model, plays
-            the groups, allocates the eight best third-placed teams, and resolves every knockout tie
-            (with penalties for draws). This matters: a single strongest team still has to survive
-            seven knockout rounds, so simulating the bracket keeps the favourite&rsquo;s odds
-            realistic instead of letting one team run away with the board.
+            The champion / finalist / semi-finalist probabilities on the cover
+            are sourced from{" "}
+            <strong className="text-foreground">pre-computed market data</strong>{" "}
+            seeded by thousands of Monte-Carlo simulations of the full 104-match
+            tournament. Each simulation samples scorelines from the goal model,
+            plays the groups, picks the eight best third-placed qualifiers,
+            and resolves every knockout match (including penalties). Pre-computing
+            these probabilities means the site loads instantly with no VM overhead
+            per visitor, while still reflecting a statistically grounded title race.
           </p>
         </Section>
 
         <Section title="Learning from live results">
           <p>
-            As official results are finalised during the tournament, each one feeds back into the
-            model with a single, lightweight{" "}
-            <strong className="text-foreground">Elo update</strong> for both teams. Completed
-            fixtures are locked to their real scores, and every remaining probability is
-            recomputed — so the predictions sharpen continuously as the tournament unfolds, without
-            an expensive retrain.
+            As official match results are confirmed during the tournament, each
+            one feeds back through a lightweight{" "}
+            <strong className="text-foreground">incremental Elo update</strong>{" "}
+            for both teams. The model state is replayed from scratch on every
+            result change — making updates idempotent and drift-free. Completed
+            fixtures are locked to their real scores, all remaining predictions
+            are recomputed, and the prediction cache is invalidated — so
+            forecasts sharpen continuously as the tournament unfolds, with no
+            expensive model retrain.
           </p>
         </Section>
 
@@ -110,9 +146,11 @@ export default function Methodology() {
             On the Play page, every match is{" "}
             <strong className="text-foreground">pre-filled</strong> with the
             ML's call. Every change you make — a swapped group ranking, a
-            different R16 winner — re-derives the rest of the bracket
-            downstream from the same model. So you're always playing against
-            the machine's view, not on top of empty data.
+            different R32 winner — re-derives the rest of the bracket
+            downstream using the same model. If you crown a surprise group
+            winner, they carry the tournament-form Elo boost into their
+            knockout matches. You're always playing against the machine's
+            view, not on top of empty data.
           </p>
         </Section>
 

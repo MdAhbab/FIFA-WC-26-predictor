@@ -15,8 +15,10 @@ interface Ctx {
     team1: string,
     team2: string,
     champion?: string,
+    name?: string,
+    referrer_vote_id?: number,
     payload?: unknown,
-  ) => Promise<void>;
+  ) => Promise<{ vote_id: number; name: string }>;
 }
 
 const VotesCtx = createContext<Ctx | null>(null);
@@ -39,9 +41,17 @@ export function VotesProvider({
   }, []);
 
   const submit = useCallback(
-    async (team1: string, team2: string, champion?: string, payload?: unknown) => {
-      const summary = await api.vote({ team1, team2, champion, payload });
-      setVotes(summary);
+    async (
+      team1: string,
+      team2: string,
+      champion?: string,
+      name?: string,
+      referrer_vote_id?: number,
+      payload?: unknown,
+    ) => {
+      const res = await api.vote({ team1, team2, champion, name, referrer_vote_id, payload });
+      setVotes(res.votes);
+      return { vote_id: res.vote_id, name: res.name };
     },
     [],
   );

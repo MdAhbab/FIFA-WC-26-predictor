@@ -58,9 +58,12 @@ export default function Home() {
             <div className="flex flex-wrap gap-3 pt-1">
               <Link
                 to="/play"
-                className="inline-flex items-center gap-2 rounded-md bg-foreground text-background display tracking-wider uppercase px-5 py-3 hover:translate-y-[-2px] hover:shadow-[3px_5px_0_var(--stamp-red)] transition-all"
+                className="relative inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-[var(--foil-blue)] to-[var(--foil-magenta)] text-white display tracking-wider uppercase px-6 py-3.5 hover:translate-y-[-2px] hover:shadow-[0_8px_20px_rgba(229,36,122,0.4)] transition-all font-bold group overflow-hidden border-2 border-foreground"
               >
-                Start the album <ArrowRight className="size-4" />
+                <span className="absolute inset-0 bg-white/15 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                <span className="relative flex items-center gap-2">
+                  Start the album <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                </span>
               </Link>
               <Link
                 to="/predictions"

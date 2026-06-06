@@ -12,6 +12,8 @@ export interface MatchRef {
   round?: string;
   date?: string;
   venue?: string;
+  /** Competition match id (1-104) — shown on the card and used to freeze news once finalised. */
+  matchId?: number;
 }
 
 interface Props {
@@ -30,7 +32,7 @@ export function MatchDetailDialog({ match, onClose }: Props) {
     setStatus("loading");
     setData(null);
     api
-      .match(match.home, match.away)
+      .match(match.home, match.away, match.matchId)
       .then((d) => {
         if (!alive) return;
         setData(d);
@@ -90,9 +92,17 @@ export function MatchDetailDialog({ match, onClose }: Props) {
 
             {/* Header */}
             <div className="relative px-5 pt-5 pb-4 border-b-2 border-foreground/10">
+              {match.matchId != null && (
+                <span className="absolute right-12 top-5 mono text-[10px] uppercase tracking-wider rounded border border-foreground/25 px-1.5 py-0.5 text-muted-foreground">
+                  #{match.matchId}
+                </span>
+              )}
               <div className="display text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
                 {match.round || "Match insight"}
                 {match.date ? ` · ${match.date}` : ""}
+                {data?.finalized && (
+                  <span className="ml-2 text-[var(--stamp-red)]">· FINAL · news frozen</span>
+                )}
               </div>
               <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                 <TeamHead name={match.home} iso={match.homeIso || data?.home.iso} />
