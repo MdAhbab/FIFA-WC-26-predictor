@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ShieldCheck, LogOut, Trophy, Users, Trash2, Zap,
-  CheckCircle, AlertTriangle, Lock, ChevronDown
+  CheckCircle, AlertTriangle, Lock, ChevronDown, CalendarDays
 } from "lucide-react";
 import { getMLBracket, type KnockoutResult } from "../lib/PicksContext";
 import { bootstrap } from "../lib/data";
@@ -221,12 +221,54 @@ function ActionBar({ existing, confirmOverwrite, busy, onSubmit, onUnpublish, on
   );
 }
 
-function loadResultsInto(setResults: (m: Record<number, ResultRow>) => void) {
+function loadResultsInto(
+  setResults: (m: Record<number, ResultRow>) => void,
+  setSchedule?: (m: Record<number, string>) => void,
+) {
   return fetch("/api/results").then(r => r.json()).then(rd => {
     const map: Record<number, ResultRow> = {};
     for (const r of (rd.results || []) as ResultRow[]) map[r.match_id] = r;
     setResults(map);
+    if (setSchedule) {
+      const s: Record<number, string> = {};
+      for (const x of (rd.schedule || []) as { match_id: number; date_utc: string }[]) s[x.match_id] = x.date_utc;
+      setSchedule(s);
+    }
   });
+}
+
+// Admin-editable match date (app only). Persists to the schedule store; the app overlays it over the
+// fixture / cosmetic date. Independent of the result, so dates can be set before a match is played.
+function ScheduleRow({ matchId, current, fallback, token, ok, err, onSaved }:
+  { matchId: number; current?: string; fallback?: string; token: string; ok: (m: string) => void; err: (m: string) => void; onSaved: () => Promise<void> | void }) {
+  const [d, setD] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setD((current || fallback || "").slice(0, 10)); }, [matchId, current, fallback]);
+  async function save() {
+    if (!d) { err("Pick a date first."); return; }
+    setBusy(true);
+    try { await api("POST", "/api/admin/schedule", { match_id: matchId, date_utc: d }, token); ok(`Date set for #${matchId} → ${d}`); await onSaved(); }
+    catch (e) { err(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(false); }
+  }
+  async function reset() {
+    setBusy(true);
+    try { await api("DELETE", `/api/admin/schedule/${matchId}`, undefined, token); ok(`Date reset for #${matchId}`); await onSaved(); }
+    catch (e) { err(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(false); }
+  }
+  return (
+    <div className="rounded-md border-2 border-foreground/15 p-3 space-y-2">
+      <div className="display text-[11px] tracking-[0.2em] uppercase text-muted-foreground flex items-center gap-1.5">
+        <CalendarDays className="size-3.5" /> Reschedule (app only){current && <span style={{ color: "var(--foil-gold)" }}>· edited</span>}
+      </div>
+      <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-end">
+        <Field label="Match date"><Input type="date" value={d} onChange={e => setD(e.target.value)} /></Field>
+        <Btn variant="ghost" disabled={busy} onClick={save}>{busy ? "…" : "Save date"}</Btn>
+        {current && <Btn variant="ghost" disabled={busy} onClick={reset}>Reset</Btn>}
+      </div>
+    </div>
+  );
 }
 
 function GroupResultsPanel({ token, ok, err }: { token: string; ok: (m: string) => void; err: (m: string) => void }) {
@@ -234,6 +276,7 @@ function GroupResultsPanel({ token, ok, err }: { token: string; ok: (m: string) 
   const [results, setResults] = useState<Record<number, ResultRow>>({});
   const [selectedGroup, setSelectedGroup] = useState("A");
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+  const [schedule, setSchedule] = useState<Record<number, string>>({});
   const [homeGoals, setHomeGoals] = useState("");
   const [awayGoals, setAwayGoals] = useState("");
   const [locked, setLocked] = useState(true);
@@ -252,7 +295,7 @@ function GroupResultsPanel({ token, ok, err }: { token: string; ok: (m: string) 
       }
       all.sort((a, b) => a.match_id - b.match_id);
       setFixtures(all);
-      loadResultsInto(setResults);
+      loadResultsInto(setResults, setSchedule);
     }).catch(() => {});
   }, []);
 
@@ -278,7 +321,7 @@ function GroupResultsPanel({ token, ok, err }: { token: string; ok: (m: string) 
         home_goals: parseInt(homeGoals) || 0, away_goals: parseInt(awayGoals) || 0, locked,
       }, token);
       ok(`✓ ${selected.home_team} ${parseInt(homeGoals) || 0}–${parseInt(awayGoals) || 0} ${selected.away_team}`);
-      await loadResultsInto(setResults);
+      await loadResultsInto(setResults, setSchedule);
       setConfirmOverwrite(false);
     } catch (e) { err(e instanceof Error ? e.message : "Failed"); }
     finally { setBusy(false); }
@@ -290,7 +333,7 @@ function GroupResultsPanel({ token, ok, err }: { token: string; ok: (m: string) 
     try {
       await api("DELETE", `/api/admin/result/${selectedMatchId}`, undefined, token);
       ok(`Removed result for match #${selectedMatchId}`);
-      await loadResultsInto(setResults);
+      await loadResultsInto(setResults, setSchedule);
       setHomeGoals(""); setAwayGoals(""); setConfirmOverwrite(false);
     } catch (e) { err(e instanceof Error ? e.message : "Failed"); }
     finally { setBusy(false); }
@@ -344,6 +387,8 @@ function GroupResultsPanel({ token, ok, err }: { token: string; ok: (m: string) 
             <input type="checkbox" checked={locked} onChange={e => setLocked(e.target.checked)} />
             <span className="display text-[11px] tracking-[0.2em] uppercase text-muted-foreground">Mark as official · locks for players</span>
           </label>
+          <ScheduleRow matchId={selectedMatchId!} current={schedule[selectedMatchId!]} fallback={selected.date_utc}
+            token={token} ok={ok} err={err} onSaved={() => loadResultsInto(setResults, setSchedule)} />
           <ActionBar existing={!!existing} confirmOverwrite={confirmOverwrite} busy={busy}
             onSubmit={() => { if (existing && !confirmOverwrite) setConfirmOverwrite(true); else doSubmit(); }}
             onUnpublish={unpublish} onCancelConfirm={() => setConfirmOverwrite(false)} submitIcon={<Trophy className="size-4" />} />
@@ -385,6 +430,7 @@ function KnockoutResultsPanel({ token, ok, err }: { token: string; ok: (m: strin
   const [results, setResults] = useState<Record<number, ResultRow>>({});
   const [selectedRound, setSelectedRound] = useState<KnockoutResult["round"]>("R32");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [schedule, setSchedule] = useState<Record<number, string>>({});
   const [homeTeam, setHomeTeam] = useState("");
   const [awayTeam, setAwayTeam] = useState("");
   const [homeGoals, setHomeGoals] = useState("");
@@ -394,7 +440,7 @@ function KnockoutResultsPanel({ token, ok, err }: { token: string; ok: (m: strin
   const [busy, setBusy] = useState(false);
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
 
-  useEffect(() => { setMatches(buildKoMatches()); loadResultsInto(setResults).catch(() => {}); }, []);
+  useEffect(() => { setMatches(buildKoMatches()); loadResultsInto(setResults, setSchedule).catch(() => {}); }, []);
 
   const roundMatches = matches.filter(m => m.round === selectedRound);
   const selected = selectedId !== null ? matches.find(m => m.match_id === selectedId) : null;
@@ -431,7 +477,7 @@ function KnockoutResultsPanel({ token, ok, err }: { token: string; ok: (m: strin
       // Refresh the server-applied bracket so deeper-round matchups reflect this result.
       await bootstrap().catch(() => {});
       setMatches(buildKoMatches());
-      await loadResultsInto(setResults);
+      await loadResultsInto(setResults, setSchedule);
       setConfirmOverwrite(false);
     } catch (e) { err(e instanceof Error ? e.message : "Failed"); }
     finally { setBusy(false); }
@@ -445,7 +491,7 @@ function KnockoutResultsPanel({ token, ok, err }: { token: string; ok: (m: strin
       ok(`Removed result for #${selectedId}`);
       await bootstrap().catch(() => {});
       setMatches(buildKoMatches());
-      await loadResultsInto(setResults);
+      await loadResultsInto(setResults, setSchedule);
       if (selected) { setHomeTeam(selected.home); setAwayTeam(selected.away); }
       setHomeGoals(""); setAwayGoals(""); setWinnerTeam(""); setConfirmOverwrite(false);
     } catch (e) { err(e instanceof Error ? e.message : "Failed"); }
@@ -518,6 +564,9 @@ function KnockoutResultsPanel({ token, ok, err }: { token: string; ok: (m: strin
             <input type="checkbox" checked={locked} onChange={e => setLocked(e.target.checked)} />
             <span className="display text-[11px] tracking-[0.2em] uppercase text-muted-foreground">Mark as official · locks for players</span>
           </label>
+          <ScheduleRow matchId={selected.match_id} current={schedule[selected.match_id]} fallback={selected.date}
+            token={token} ok={ok} err={err}
+            onSaved={async () => { await bootstrap().catch(() => {}); setMatches(buildKoMatches()); await loadResultsInto(setResults, setSchedule); }} />
           <ActionBar existing={!!existing} confirmOverwrite={confirmOverwrite} busy={busy}
             onSubmit={() => { if (existing && !confirmOverwrite) setConfirmOverwrite(true); else doSubmit(); }}
             onUnpublish={unpublish} onCancelConfirm={() => setConfirmOverwrite(false)} submitIcon={<Zap className="size-4" />} />

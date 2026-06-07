@@ -34,6 +34,9 @@ let GROUP_FORECASTS: Record<string, GroupForecast> = {};
 let TITLE_RACE: TitleRaceEntry[] = [];
 let META: Meta | null = null;
 let RESULTS: OfficialResult[] = [];
+// Admin-edited match dates (competition match_id -> YYYY-MM-DD). Applied over the group fixture dates
+// and the cosmetic knockout dates so the app schedule can be corrected without a server recompute.
+let SCHEDULE: Record<number, string> = {};
 let LOADED = false;
 
 function applyPayload(d: StrengthData) {
@@ -42,6 +45,22 @@ function applyPayload(d: StrengthData) {
   GROUP_FORECASTS = d.groups;
   TITLE_RACE = d.title_race;
   META = d.meta;
+}
+
+/** Overlay admin-edited dates onto the (freshly applied) group fixtures. Idempotent. */
+function applyScheduleToGroups() {
+  for (const g of Object.values(GROUP_FORECASTS)) {
+    for (const m of g.matches) {
+      const id = parseInt(String(m.matchId).replace("G", ""), 10);
+      const d = SCHEDULE[id];
+      if (d) m.date = d;
+    }
+  }
+}
+
+/** Admin-edited date for a competition match id (group 1-72, knockout 73-104), if any. */
+export function getScheduleDate(matchId: number): string | undefined {
+  return SCHEDULE[matchId];
 }
 
 export function isLoaded() {
@@ -65,6 +84,9 @@ export async function bootstrap(): Promise<{
   const d = await api.bootstrap();
   applyPayload(d);
   RESULTS = d.results ?? [];
+  SCHEDULE = {};
+  for (const s of d.schedule ?? []) SCHEDULE[s.match_id] = s.date_utc;
+  applyScheduleToGroups();
   LOADED = true;
   return { votes: d.votes, session: d.session };
 }
@@ -77,6 +99,7 @@ export async function applyStrength(cfg: {
 }) {
   const d = await api.strength(cfg);
   applyPayload(d);
+  applyScheduleToGroups();
 }
 
 // ---------- Lookups ----------

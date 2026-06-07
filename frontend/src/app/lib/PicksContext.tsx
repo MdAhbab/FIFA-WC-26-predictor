@@ -14,6 +14,7 @@ import {
   applyStrength as applyStrengthData,
   getAllGroupForecasts,
   getOfficialResults,
+  getScheduleDate,
   getTitleRace,
   predictMatch,
   teamByName,
@@ -287,6 +288,8 @@ function makeKO(
   // Live Elo each side carries into this match (already boosted by prior rounds / group finish).
   const homeElo = Math.round(liveElo.get(home.name) ?? home.elo);
   const awayElo = Math.round(liveElo.get(away.name) ?? away.elo);
+  // Admin-edited date (per competition match id) wins over the cosmetic generated date.
+  const date = getScheduleDate(koCompetitionId(matchId)) ?? dateForKO(dayOffset);
 
   const r = predictMatch(home, away, matchId, { allowDraw: false });
   const mlWinner = r.winner as "home" | "away";
@@ -346,7 +349,7 @@ function makeKO(
     matchId, round, home, away, homeElo, awayElo,
     homeGoals, awayGoals, winner, winnerTeam, penalties,
     corners: r.corners, yellows: r.yellows, reds: r.reds,
-    date: dateForKO(dayOffset), venue: venueFor(matchId),
+    date, venue: venueFor(matchId),
     userOverride, autoPredicted,
     ...(isOfficial ? { official: true } : {}),
   };

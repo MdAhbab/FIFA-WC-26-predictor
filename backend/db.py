@@ -55,6 +55,15 @@ def init_db():
                 salt TEXT NOT NULL
             )"""
         )
+        # Admin-editable match dates (app only). One row per match_id; overrides the fixture/cosmetic
+        # date shown in the app so the schedule can track real-world changes without a redeploy.
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS match_schedule (
+                match_id INTEGER PRIMARY KEY,
+                date_utc TEXT NOT NULL,
+                ts TEXT NOT NULL
+            )"""
+        )
         
         # Migrations: Add new columns if they do not exist
         try:
@@ -121,6 +130,33 @@ def list_official_results() -> list[dict]:
 def delete_official_result(match_id) -> int:
     with _LOCK, _conn() as c:
         cur = c.execute("DELETE FROM official_results WHERE match_id=?", (int(match_id),))
+        return cur.rowcount
+
+
+# ---------------------------------------------------------------------------
+# Match schedule (admin-editable dates; app display only)
+# ---------------------------------------------------------------------------
+def upsert_schedule(match_id, date_utc) -> None:
+    ts = datetime.now(timezone.utc).isoformat()
+    with _LOCK, _conn() as c:
+        c.execute(
+            """INSERT INTO match_schedule (match_id, date_utc, ts) VALUES (?,?,?)
+               ON CONFLICT(match_id) DO UPDATE SET date_utc=excluded.date_utc, ts=excluded.ts""",
+            (int(match_id), str(date_utc), ts),
+        )
+
+
+def list_schedule() -> list[dict]:
+    with _LOCK, _conn() as c:
+        rows = c.execute(
+            "SELECT match_id, date_utc FROM match_schedule ORDER BY match_id"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def delete_schedule(match_id) -> int:
+    with _LOCK, _conn() as c:
+        cur = c.execute("DELETE FROM match_schedule WHERE match_id=?", (int(match_id),))
         return cur.rowcount
 
 

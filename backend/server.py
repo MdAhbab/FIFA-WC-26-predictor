@@ -14,10 +14,13 @@ Performance model (the VM is small):
 """
 from __future__ import annotations
 import copy
+import html as _html
 import json
 import os
+import re
 import threading
 from collections import OrderedDict
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -44,7 +47,7 @@ _load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response as RawResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -162,6 +165,97 @@ def _load_results():
             'winner_team': r.get('winner_team')
         }
     _rebuild_state_from_results()
+
+
+# Admin-editable match dates (app display only — no effect on Elo/predictions, so no cache bump).
+_SCHEDULE: dict[int, str] = {}
+
+
+def _load_schedule():
+    _SCHEDULE.clear()
+    for r in db.list_schedule():
+        _SCHEDULE[int(r['match_id'])] = str(r['date_utc'])
+
+
+def _schedule_list() -> list[dict]:
+    return [{"match_id": k, "date_utc": v} for k, v in sorted(_SCHEDULE.items())]
+
+
+# ---------------------------------------------------------------------------
+# SEO: the served index.html + sitemap are re-rendered with the *current* predicted champion and a
+# "last updated" timestamp, so an admin result/date change is reflected to crawlers without a rebuild.
+# ---------------------------------------------------------------------------
+PUBLIC_DOMAIN = os.environ.get("WC_PUBLIC_DOMAIN", "fifaworldcup26predictor.ahbab.dev")
+_SEO_LOCK = threading.Lock()
+_SEO_GEN = 0
+_LAST_MODIFIED = datetime.now(timezone.utc)
+_INDEX_RAW: str | None = None
+_INDEX_RENDERED: str | None = None
+_INDEX_KEY: tuple | None = None
+
+
+def _bump_seo():
+    """Mark the site as freshly updated so the next index.html / sitemap serve reflects it."""
+    global _SEO_GEN, _LAST_MODIFIED
+    with _SEO_LOCK:
+        _SEO_GEN += 1
+        _LAST_MODIFIED = datetime.now(timezone.utc)
+
+
+def _current_champion() -> str:
+    try:
+        return str(get_payload({}, MC_BASE_SIMS).get("meta", {}).get("champion") or "")
+    except Exception:
+        return ""
+
+
+def _set_title(html_text: str, title: str) -> str:
+    return re.sub(r"<title>.*?</title>", f"<title>{_html.escape(title)}</title>",
+                  html_text, count=1, flags=re.S)
+
+
+def _set_meta(html_text: str, attr: str, name: str, content: str) -> str:
+    esc = _html.escape(content, quote=True)
+    pat = re.compile(r'(<meta\s+' + attr + r'="' + re.escape(name) + r'"\s+content=")(.*?)(")', re.S)
+    return pat.sub(lambda m: m.group(1) + esc + m.group(3), html_text, count=1) if pat.search(html_text) else html_text
+
+
+def _render_index() -> str:
+    """index.html with SEO title/description/OG re-rendered for the current champion + last-updated."""
+    global _INDEX_RAW, _INDEX_RENDERED, _INDEX_KEY
+    with _SEO_LOCK:
+        if _INDEX_RAW is None:
+            _INDEX_RAW = (DIST / "index.html").read_text(encoding="utf-8")
+        last = _LAST_MODIFIED
+        seo_gen = _SEO_GEN
+    champ = _current_champion()
+    results_applied = len(_RESULTS)
+    key = (seo_gen, champ, results_applied)
+    with _SEO_LOCK:
+        if _INDEX_KEY == key and _INDEX_RENDERED is not None:
+            return _INDEX_RENDERED
+    updated = last.strftime("%B ") + str(last.day) + last.strftime(", %Y")
+    iso = last.isoformat()
+    if champ:
+        title = f"FIFA World Cup 2026 Predictor — {champ} projected to win"
+        desc = (f"Updated {updated}: the ML model currently projects {champ} to win the 2026 FIFA World Cup"
+                + (f" ({results_applied} official results factored in)" if results_applied else "")
+                + ". Group forecasts, full knockout bracket and Monte-Carlo champion odds. Entertainment only.")
+    else:
+        title = "FIFA World Cup 2026 Predictor — ML Bracket, Group & Knockout Predictions"
+        desc = ("Free ML-powered FIFA World Cup 2026 predictor: group forecasts, full knockout bracket, "
+                "champion odds from Monte-Carlo simulations. Build your own bracket and vote. Entertainment only.")
+    html_text = _set_title(_INDEX_RAW, title)
+    for a, n in (("name", "description"), ("property", "og:description"), ("name", "twitter:description")):
+        html_text = _set_meta(html_text, a, n, desc)
+    for a, n in (("property", "og:title"), ("name", "twitter:title")):
+        html_text = _set_meta(html_text, a, n, title)
+    extra = (f'<meta property="og:updated_time" content="{iso}" />\n'
+             f'    <meta name="last-modified" content="{iso}" />\n  ')
+    html_text = html_text.replace("</head>", extra + "</head>", 1)
+    with _SEO_LOCK:
+        _INDEX_RENDERED, _INDEX_KEY = html_text, key
+    return html_text
 
 
 # ---------------------------------------------------------------------------
@@ -344,6 +438,11 @@ class ResultReq(BaseModel):
     winner_team: str | None = None
 
 
+class ScheduleReq(BaseModel):
+    match_id: int
+    date_utc: str
+
+
 def _attach_session(request: Request, response: Response) -> str:
     sid, _s, _created = sessions.touch(request.cookies.get(sessions.COOKIE_NAME))
     response.set_cookie(sessions.COOKIE_NAME, sid, max_age=sessions.SESSION_TTL,
@@ -354,6 +453,7 @@ def _attach_session(request: Request, response: Response) -> str:
 @app.on_event("startup")
 def _startup():
     _load_results()                 # replay any saved official results onto team state
+    _load_schedule()                # load admin-edited match dates
     get_payload({}, MC_BASE_SIMS)   # warm the base payload exactly once
 
 
@@ -371,6 +471,7 @@ def bootstrap(request: Request, response: Response):
     p = dict(get_payload({}, MC_BASE_SIMS))
     p["votes"] = db.vote_summary(VALID_TEAMS)
     p["results"] = list(_RESULTS.values())
+    p["schedule"] = _schedule_list()
     p["session"] = sessions.info(sid)
     return p
 
@@ -452,7 +553,7 @@ def get_news(n: int = 8):
 
 @app.get("/api/results")
 def results():
-    return {"results": list(_RESULTS.values()), "count": len(_RESULTS)}
+    return {"results": list(_RESULTS.values()), "schedule": _schedule_list(), "count": len(_RESULTS)}
 
 
 def normalize_team_name(name: str | None) -> str | None:
@@ -549,6 +650,7 @@ def admin_result(req: ResultReq, x_admin_token: str = Header(default="")):
     _load_results()
     news.invalidate()               # refresh live news + freeze the now-finalised match's card
     get_payload({}, MC_BASE_SIMS)   # re-warm base payload with the new result baked in
+    _bump_seo()                     # champion may have changed → refresh served SEO + sitemap
     return {"ok": True, "count": len(_RESULTS), "generation": _GEN}
 
 
@@ -559,7 +661,29 @@ def admin_delete_result(match_id: int, x_admin_token: str = Header(default="")):
     _load_results()
     news.invalidate()               # un-freeze the match's card + refresh the live rail
     get_payload({}, MC_BASE_SIMS)
+    _bump_seo()
     return {"ok": True, "count": len(_RESULTS), "generation": _GEN}
+
+
+@app.post("/api/admin/schedule")
+def admin_schedule(req: ScheduleReq, x_admin_token: str = Header(default="")):
+    _require_admin(x_admin_token)
+    date = (req.date_utc or "").strip()
+    if not date:
+        raise HTTPException(400, "A date is required.")
+    db.upsert_schedule(req.match_id, date)
+    _load_schedule()
+    _bump_seo()                     # schedule change → bump "last updated" for SEO/sitemap
+    return {"ok": True, "schedule": _schedule_list()}
+
+
+@app.delete("/api/admin/schedule/{match_id}")
+def admin_delete_schedule(match_id: int, x_admin_token: str = Header(default="")):
+    _require_admin(x_admin_token)
+    db.delete_schedule(match_id)
+    _load_schedule()
+    _bump_seo()
+    return {"ok": True, "schedule": _schedule_list()}
 
 
 @app.post("/api/admin/vote_inject")
@@ -581,6 +705,26 @@ def admin_clear_votes(x_admin_token: str = Header(default="")):
 
 
 # ---------------------------------------------------------------------------
+# Dynamic sitemap — `lastmod` tracks the latest admin update so crawlers re-fetch after a change.
+# Declared before the SPA catch-all so it wins over any static dist/sitemap.xml.
+# ---------------------------------------------------------------------------
+@app.get("/sitemap.xml")
+def sitemap():
+    base = f"https://{PUBLIC_DOMAIN}"
+    lastmod = _LAST_MODIFIED.strftime("%Y-%m-%d")
+    pages = [("/", "daily", "1.0"), ("/predictions", "daily", "0.9"), ("/play", "weekly", "0.8"),
+             ("/methodology", "monthly", "0.5"), ("/privacy", "yearly", "0.3"),
+             ("/terms", "yearly", "0.3"), ("/disclaimer", "yearly", "0.3")]
+    items = "".join(
+        f"\n  <url><loc>{base}{path}</loc><lastmod>{lastmod}</lastmod>"
+        f"<changefreq>{cf}</changefreq><priority>{pr}</priority></url>"
+        for path, cf, pr in pages)
+    body = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + items + "\n</urlset>\n")
+    return RawResponse(content=body, media_type="application/xml")
+
+
+# ---------------------------------------------------------------------------
 # Serve the built frontend (prod). In dev the Vite server proxies /api here.
 # ---------------------------------------------------------------------------
 if DIST.exists():
@@ -591,6 +735,7 @@ if DIST.exists():
         if full_path.startswith("api/"):
             raise HTTPException(404)
         candidate = DIST / full_path
-        if full_path and candidate.is_file():
+        if full_path and candidate.is_file() and candidate.name != "index.html":
             return FileResponse(candidate)
-        return FileResponse(DIST / "index.html")
+        # SPA routes (and the root) get the SEO-rendered index so crawlers see the current champion.
+        return HTMLResponse(_render_index())

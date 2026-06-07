@@ -162,9 +162,15 @@ export interface StrengthData {
   meta: Meta;
 }
 
+export interface ScheduleEntry {
+  match_id: number;
+  date_utc: string;
+}
+
 export interface BootstrapData extends StrengthData {
   votes: VoteSummary;
   results: OfficialResult[];
+  schedule: ScheduleEntry[];
   session: SessionInfo;
 }
 
