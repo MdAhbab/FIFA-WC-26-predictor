@@ -53,12 +53,30 @@ def ensure_frontend_built() -> bool:
         return False
 
 
+def is_venv() -> bool:
+    return sys.prefix != sys.base_prefix or hasattr(sys, "real_prefix")
+
+
 def main():
+    venv_path = ROOT / ".venv"
+    if not is_venv() and venv_path.exists():
+        python_exe = venv_path / "bin" / "python3"
+        if os.name == "nt":
+            python_exe = venv_path / "Scripts" / "python.exe"
+        
+        if python_exe.exists():
+            print(f"[run_onVM] Re-executing with virtual environment: {python_exe}")
+            os.execv(str(python_exe), [str(python_exe)] + sys.argv)
+
     have_ui = ensure_frontend_built()
     try:
         import uvicorn  # noqa: F401
     except ImportError:
-        sys.exit("[run_onVM] Missing deps. Run: pip install -r backend/requirements.txt")
+        print("[run_onVM] Missing dependencies. Run: pip install -r backend/requirements.txt")
+        if (ROOT / ".venv").exists():
+            print(f"[run_onVM] TIP: A virtual environment was found at {ROOT / '.venv'}.")
+            print("[run_onVM]      Try running with: .venv/bin/python3 run_onVM.py")
+        sys.exit(1)
 
     port = int(os.environ.get("WC_PORT", os.environ.get("PORT", DEFAULT_PORT)))
     host = os.environ.get("WC_HOST", "0.0.0.0")
@@ -69,10 +87,11 @@ def main():
     os.chdir(BACKEND)
 
     print("=" * 64)
-    print(f"  WC2026 Predictor (production)  ->  http://{host}:{port}")
+    display_host = host if host != "0.0.0.0" else "<VM-IP>"
+    print(f"  WC2026 Predictor (production)  ->  http://{display_host}:{port}")
     print(f"  Frontend: {'served from /dist' if have_ui else 'NOT built (API only)'}")
     print(f"  Reverse-proxy this to:  https://{DOMAIN}")
-    print(f"  Health:  http://{host}:{port}/api/health")
+    print(f"  Health:  http://{display_host}:{port}/api/health")
     print("=" * 64)
 
     import uvicorn
