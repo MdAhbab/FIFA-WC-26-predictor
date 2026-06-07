@@ -1,4 +1,4 @@
 # ads.txt — authorised digital sellers (IAB).
 # Required by Google AdSense once you have a publisher id. Replace pub-XXXXXXXXXXXXXXXX
 # with your real AdSense publisher id and uncomment the line below, then redeploy.
-# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+google.com, pub-9972634875622184, DIRECT, f08c47fec0942fa0

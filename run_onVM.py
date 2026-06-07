@@ -1,23 +1,13 @@
 """
-Production launcher for the GCP VM (no Docker required).
+Production launcher for the GCP VM using Docker.
 
-Why this exists: the VM already runs the portfolio at ahbab.dev on the usual ports, so this app
-must NOT take port 8000. It binds 0.0.0.0 on a dedicated port (default 8090) for a reverse proxy
-(nginx/Caddy) to serve at https://fifaworldcup26predictor.ahbab.dev.
+Why this exists: This script orchestrates the Docker setup for the application.
+It stops any conflicting native instances and uses docker-compose to build 
+and run the application in an isolated container.
 
 Usage on the VM:
     git clone <repo> && cd FIFA-WC-26-predictor
-    python3 -m venv .venv && . .venv/bin/activate
-    pip install -r backend/requirements.txt
-    python run_onVM.py                 # builds frontend if needed, serves on :8090
-
-Environment:
-    WC_PORT          port to bind (default 8090; never 8000)
-    WC_HOST          host to bind (default 0.0.0.0)
-    WC_ADMIN_TOKEN   enable official-result (continual-learning) writes
-    WC_MC_SIMS       Monte-Carlo iterations for the base payload (default 4000)
-    WC_MAX_COMPUTE   max concurrent heavy recomputes (default 4)
-    SKIP_BUILD=1     don't attempt an npm build (assume frontend/dist already exists)
+    python3 run_onVM.py
 """
 import os
 import subprocess
@@ -25,118 +15,87 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-BACKEND = ROOT / "backend"
-FRONTEND = ROOT / "frontend"
-DIST = FRONTEND / "dist"
 
-DEFAULT_PORT = "8090"   # deliberately not 8000 (portfolio lives on the same VM)
-DOMAIN = "fifaworldcup26predictor.ahbab.dev"
-
-
-def ensure_frontend_built() -> bool:
-    if DIST.exists():
-        return True
-    if os.environ.get("SKIP_BUILD") == "1":
-        print("[run_onVM] frontend/dist missing and SKIP_BUILD=1 set — serving API only.")
-        return False
-    print("[run_onVM] frontend/dist not found — building once (needs Node/npm)...")
-    npm = "npm.cmd" if os.name == "nt" else "npm"
-    try:
-        if not (FRONTEND / "node_modules").exists():
-            subprocess.run([npm, "ci"], cwd=FRONTEND, check=False) or \
-                subprocess.run([npm, "install"], cwd=FRONTEND, check=True)
-        subprocess.run([npm, "run", "build"], cwd=FRONTEND, check=True)
-        return DIST.exists()
-    except Exception as e:  # noqa: BLE001
-        print(f"[run_onVM] Could not build the frontend automatically ({e}).")
-        print(f"[run_onVM] Build it manually: cd {FRONTEND} && npm install && npm run build")
-        return False
-
-
-def is_venv() -> bool:
-    return sys.prefix != sys.base_prefix or hasattr(sys, "real_prefix")
-
-
-def kill_previous_instances(port: int):
+def kill_previous_native_instances(port: int = 8090):
+    """Ensure no native python processes are hogging the port before docker starts."""
     import signal
     import time
-    current_pid = os.getpid()
-    # Kill any other process running 'run_onVM.py'
+    
+    print("[run_onVM] Checking for native python processes...")
     try:
-        out = subprocess.check_output(["pgrep", "-f", "run_onVM.py"]).decode()
+        out = subprocess.check_output(["pgrep", "-f", "uvicorn server:app"]).decode()
         for pid_str in out.strip().split():
             if not pid_str: continue
             pid = int(pid_str)
-            if pid != current_pid:
-                print(f"[run_onVM] Stopping previous instance (PID: {pid})...")
-                try:
-                    os.kill(pid, signal.SIGTERM)
-                except OSError:
-                    pass
+            print(f"[run_onVM] Stopping native uvicorn instance (PID: {pid})...")
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
         time.sleep(1)
     except Exception:
         pass
-    # Double check the port is free
+        
     try:
         out = subprocess.check_output(["fuser", f"{port}/tcp"], stderr=subprocess.DEVNULL).decode()
         for pid_str in out.strip().split():
             if not pid_str: continue
             pid = int(pid_str)
-            if pid != current_pid:
-                print(f"[run_onVM] Freeing port {port} (killing PID: {pid})...")
-                try:
-                    os.kill(pid, signal.SIGTERM)
-                except OSError:
-                    pass
+            print(f"[run_onVM] Freeing port {port} (killing PID: {pid})...")
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
         time.sleep(1)
     except Exception:
         pass
 
-
 def main():
-    port_env = int(os.environ.get("WC_PORT", os.environ.get("PORT", DEFAULT_PORT)))
-    kill_previous_instances(port_env)
+    print("=" * 64)
+    print("  Deploying WC2026 Predictor via Docker")
+    print("=" * 64)
 
-    venv_path = ROOT / ".venv"
-    if not is_venv() and venv_path.exists():
-        python_exe = venv_path / "bin" / "python3"
-        if os.name == "nt":
-            python_exe = venv_path / "Scripts" / "python.exe"
-        
-        if python_exe.exists():
-            print(f"[run_onVM] Re-executing with virtual environment: {python_exe}")
-            os.execv(str(python_exe), [str(python_exe)] + sys.argv)
+    # 1. Kill any native instances that might conflict with Docker's port binding
+    kill_previous_native_instances(8090)
 
-    have_ui = ensure_frontend_built()
+    # 2. Check if docker is installed
     try:
-        import uvicorn  # noqa: F401
-    except ImportError:
-        print("[run_onVM] Missing dependencies. Run: pip install -r backend/requirements.txt")
-        if (ROOT / ".venv").exists():
-            print(f"[run_onVM] TIP: A virtual environment was found at {ROOT / '.venv'}.")
-            print("[run_onVM]      Try running with: .venv/bin/python3 run_onVM.py")
+        subprocess.run(["docker", "--version"], check=True, stdout=subprocess.DEVNULL)
+    except FileNotFoundError:
+        print("[run_onVM] Error: Docker is not installed on this system.")
         sys.exit(1)
 
-    port = int(os.environ.get("WC_PORT", os.environ.get("PORT", DEFAULT_PORT)))
-    host = os.environ.get("WC_HOST", "0.0.0.0")
-    if port == 8000:
-        print("[run_onVM] WARNING: port 8000 may collide with the portfolio on this VM.")
+    # 3. Run docker compose
+    compose_cmd = ["docker", "compose"]
+    try:
+        # Check if docker compose plugin is available, otherwise try docker-compose
+        subprocess.run(compose_cmd + ["version"], check=True, stdout=subprocess.DEVNULL)
+    except Exception:
+        compose_cmd = ["docker-compose"]
+        try:
+            subprocess.run(compose_cmd + ["version"], check=True, stdout=subprocess.DEVNULL)
+        except Exception:
+            print("[run_onVM] Error: docker compose (or docker-compose) is not installed.")
+            sys.exit(1)
 
-    sys.path.insert(0, str(BACKEND))
-    os.chdir(BACKEND)
+    print("[run_onVM] Tearing down old containers and rebuilding...")
+    
+    # Needs sudo if the user is not in the docker group, but let's try without first.
+    # Usually on standard setups `sudo` might be needed, we will just pass the command.
+    try:
+        subprocess.run(compose_cmd + ["-f", "docker-compose.yml", "down"], cwd=ROOT, check=True)
+        subprocess.run(compose_cmd + ["-f", "docker-compose.yml", "up", "-d", "--build"], cwd=ROOT, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[run_onVM] Deployment failed with exit code {e.returncode}.")
+        print("[run_onVM] You might need to run this script with 'sudo python3 run_onVM.py' if you lack docker permissions.")
+        sys.exit(e.returncode)
 
     print("=" * 64)
-    display_host = host if host != "0.0.0.0" else "<VM-IP>"
-    print(f"  WC2026 Predictor (production)  ->  http://{display_host}:{port}")
-    print(f"  Frontend: {'served from /dist' if have_ui else 'NOT built (API only)'}")
-    print(f"  Reverse-proxy this to:  https://{DOMAIN}")
-    print(f"  Health:  http://{display_host}:{port}/api/health")
+    print("  Deployment Successful!")
+    print("  Container is running in the background.")
+    print("  Port 8090 is exposed to localhost.")
+    print("  To view logs, run: docker compose logs -f")
     print("=" * 64)
-
-    import uvicorn
-    # Single worker: model + prediction cache + sessions + continual-learning state are in-process.
-    uvicorn.run("server:app", host=host, port=port, workers=1, log_level="info")
-
 
 if __name__ == "__main__":
     main()

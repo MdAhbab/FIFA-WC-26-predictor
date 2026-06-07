@@ -708,7 +708,7 @@ def admin_clear_votes(x_admin_token: str = Header(default="")):
 # Dynamic sitemap — `lastmod` tracks the latest admin update so crawlers re-fetch after a change.
 # Declared before the SPA catch-all so it wins over any static dist/sitemap.xml.
 # ---------------------------------------------------------------------------
-@app.get("/sitemap.xml")
+@app.api_route("/sitemap.xml", methods=["GET", "HEAD"])
 def sitemap():
     base = f"https://{PUBLIC_DOMAIN}"
     lastmod = _LAST_MODIFIED.strftime("%Y-%m-%d")
@@ -730,7 +730,7 @@ def sitemap():
 if DIST.exists():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
 
-    @app.get("/{full_path:path}")
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
     def spa(full_path: str):
         if full_path.startswith("api/"):
             raise HTTPException(404)
