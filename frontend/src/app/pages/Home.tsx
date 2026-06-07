@@ -11,7 +11,7 @@ import { RecentNews } from "../components/RecentNews";
 
 export default function Home() {
   useSEO({
-    title: "predict the champs",
+    title: "Predict The Champs",
     description:
       "A gamified, ML-powered predictor for the 2026 FIFA World Cup. Pick your groups, plan the knockouts, let the model finish the job.",
   });
