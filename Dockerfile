@@ -14,6 +14,7 @@ ARG VITE_ADSENSE_CLIENT=""
 ARG VITE_AD_SLOT_LEADERBOARD=""
 ARG VITE_AD_SLOT_RECTANGLE=""
 ARG VITE_AD_SLOT_IN_ARTICLE=""
+ENV NODE_OPTIONS="--max-old-space-size=512"
 RUN npm run build
 
 # ---------------------------------------------------------------------------
