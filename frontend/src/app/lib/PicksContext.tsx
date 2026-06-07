@@ -35,6 +35,22 @@ function koCompetitionId(idStr: string): number {
   return n === 31 ? 104 : 72 + n;
 }
 
+// ---------- Live Elo (frontend-only gamification) ----------
+// The server's base Elo is never mutated — these boosts are computed entirely in the browser so the
+// admin can update scores without forcing a server recompute, and the model's initial ratings stay
+// safe. They drive the Elo numbers shown on the knockout cards (which grow as a team advances).
+const GROUP_WINNER_BONUS = 10; // group 1st place, applied entering the Round of 32
+const GROUP_RUNNER_BONUS = 5; // group 2nd place, applied entering the Round of 32
+const GOAL_ELO_BOOST = 3; // per goal scored by the winner of a knockout tie
+
+// Each knockout round survived compounds an Elo boost that favours underdogs:
+//   boost = (elo · (1000/elo)²)^(2/3) = (1_000_000 / elo)^(2/3)
+// A lower-rated advancer gains MORE than a heavy favourite, so a giant-killer's run keeps it
+// competitive deeper into the bracket.
+function stageAdvanceBoost(elo: number): number {
+  return Math.pow(1_000_000 / Math.max(elo, 1), 2 / 3);
+}
+
 // ---------- State ----------
 export interface PicksState {
   groupOrder: Record<string, string[]>; // group letter -> 4 team names (pos1..pos4)
@@ -180,9 +196,11 @@ function reducer(state: PicksState, action: Action): PicksState {
 export interface KnockoutResult {
   matchId: string;
   round: "R32" | "R16" | "QF" | "SF" | "Final";
-  multiplier: number;
   home: RawTeam;
   away: RawTeam;
+  /** Live Elo of each side as they enter this match (base + group bonus + accumulated KO boosts). */
+  homeElo: number;
+  awayElo: number;
   homeGoals: number;
   awayGoals: number;
   winner: "home" | "away";
@@ -251,19 +269,34 @@ function venueFor(seed: string) {
   return VENUES[h % VENUES.length];
 }
 
+// Rounds whose goals the user can nudge with the steppers (R32/R16/QF). Kept in sync with MatchPicker.
+const GOAL_EDITABLE_ROUNDS = new Set<KnockoutResult["round"]>(["R32", "R16", "QF"]);
+
 function makeKO(
   matchId: string,
   round: KnockoutResult["round"],
-  multiplier: number,
   home: RawTeam,
   away: RawTeam,
   picks: Record<string, "home" | "away">,
+  goalsOverride: Record<string, { home: number; away: number }>,
   dayOffset: number,
   autoPredicted: boolean,
+  liveElo: Map<string, number>,
   official?: Map<number, OfficialResult>,
 ): KnockoutResult {
+  // Live Elo each side carries into this match (already boosted by prior rounds / group finish).
+  const homeElo = Math.round(liveElo.get(home.name) ?? home.elo);
+  const awayElo = Math.round(liveElo.get(away.name) ?? away.elo);
+
   const r = predictMatch(home, away, matchId, { allowDraw: false });
   const mlWinner = r.winner as "home" | "away";
+
+  let homeGoals: number;
+  let awayGoals: number;
+  let winner: "home" | "away";
+  let penalties: boolean;
+  let userOverride = false;
+  let isOfficial = false;
 
   // A recorded real-world result overrides the prediction (only if the teams that actually reached
   // this slot match the finalised fixture — otherwise the bracket has diverged and we predict).
@@ -271,49 +304,51 @@ function makeKO(
   if (off && new Set([off.home, off.away]).size === 2 &&
       ((off.home === home.name && off.away === away.name) ||
        (off.home === away.name && off.away === home.name))) {
-    const homeGoals = off.home === home.name ? off.hg : off.ag;
-    const awayGoals = off.home === home.name ? off.ag : off.hg;
-    const winner: "home" | "away" = off.winner_team
+    homeGoals = off.home === home.name ? off.hg : off.ag;
+    awayGoals = off.home === home.name ? off.ag : off.hg;
+    winner = off.winner_team
       ? off.winner_team === home.name ? "home" : "away"
       : homeGoals > awayGoals ? "home" : awayGoals > homeGoals ? "away" : mlWinner;
-    return {
-      matchId, round, multiplier, home, away,
-      homeGoals, awayGoals, winner,
-      winnerTeam: winner === "home" ? home : away,
-      penalties: homeGoals === awayGoals,
-      corners: r.corners, yellows: r.yellows, reds: r.reds,
-      date: dateForKO(dayOffset), venue: venueFor(matchId),
-      userOverride: false, autoPredicted, official: true,
-    };
+    penalties = homeGoals === awayGoals;
+    isOfficial = true;
+  } else {
+    const applied = applyUserPick(
+      matchId, home, away, mlWinner, r.homeGoals, r.awayGoals,
+      autoPredicted ? undefined : picks[matchId],
+    );
+    homeGoals = applied.homeGoals;
+    awayGoals = applied.awayGoals;
+    winner = applied.winner;
+    penalties = r.penalties;
+    userOverride = applied.userOverride;
+
+    // User goal-stepper edits (live, goal-editable rounds) take over the scoreline and re-derive the
+    // advancing side from it: a decisive edit crowns the higher-scoring team; a level edit goes to
+    // penalties with the picked side advancing. This keeps the bracket coherent with what's shown.
+    const ug = goalsOverride[matchId];
+    if (ug && !autoPredicted && GOAL_EDITABLE_ROUNDS.has(round)) {
+      homeGoals = ug.home;
+      awayGoals = ug.away;
+      if (homeGoals !== awayGoals) winner = homeGoals > awayGoals ? "home" : "away";
+      penalties = homeGoals === awayGoals;
+    }
   }
 
-  const applied = applyUserPick(
-    matchId,
-    home,
-    away,
-    mlWinner,
-    r.homeGoals,
-    r.awayGoals,
-    autoPredicted ? undefined : picks[matchId],
-  );
+  const winnerTeam = winner === "home" ? home : away;
+
+  // Advance: the winner compounds a goal boost + a stage-survival boost into the next round.
+  const preElo = liveElo.get(winnerTeam.name) ?? winnerTeam.elo;
+  const winnerGoals = winner === "home" ? homeGoals : awayGoals;
+  const goalsForBoost = homeGoals === awayGoals ? 1 : winnerGoals; // shootout win counts as one goal
+  liveElo.set(winnerTeam.name, preElo + goalsForBoost * GOAL_ELO_BOOST + stageAdvanceBoost(preElo));
+
   return {
-    matchId,
-    round,
-    multiplier,
-    home,
-    away,
-    homeGoals: applied.homeGoals,
-    awayGoals: applied.awayGoals,
-    winner: applied.winner,
-    winnerTeam: applied.winnerTeam,
-    penalties: r.penalties,
-    corners: r.corners,
-    yellows: r.yellows,
-    reds: r.reds,
-    date: dateForKO(dayOffset),
-    venue: venueFor(matchId),
-    userOverride: applied.userOverride,
-    autoPredicted,
+    matchId, round, home, away, homeElo, awayElo,
+    homeGoals, awayGoals, winner, winnerTeam, penalties,
+    corners: r.corners, yellows: r.yellows, reds: r.reds,
+    date: dateForKO(dayOffset), venue: venueFor(matchId),
+    userOverride, autoPredicted,
+    ...(isOfficial ? { official: true } : {}),
   };
 }
 
@@ -379,6 +414,17 @@ export function deriveBracket(state: PicksState): DerivedBracket {
     push(q);
   }
 
+  // Live Elo: base ratings + group-finish bonus (1st +10, 2nd +5) entering the knockouts. makeKO
+  // then compounds the per-goal and stage-survival boosts as each tie is resolved in bracket order,
+  // so a team's shown Elo climbs the further it goes.
+  const liveElo = new Map<string, number>();
+  for (const g of GROUP_LETTERS) {
+    const w = effectiveStandings[g][0].team;
+    const ru = effectiveStandings[g][1].team;
+    liveElo.set(w.name, w.elo + GROUP_WINNER_BONUS);
+    liveElo.set(ru.name, ru.elo + GROUP_RUNNER_BONUS);
+  }
+
   // R32 — auto until user reaches r32 stage. We compute ML defaults always
   // and only honor user picks if the stage is unlocked.
   const r32Unlocked = state.stage !== "intro" && state.stage !== "groups";
@@ -391,12 +437,13 @@ export function deriveBracket(state: PicksState): DerivedBracket {
       makeKO(
         `K${i + 1}`,
         "R32",
-        1,
         a.team,
         b.team,
         state.knockoutPicks,
+        state.knockoutGoals,
         i,
         !r32Unlocked,
+        liveElo,
         official,
       ),
     );
@@ -411,12 +458,13 @@ export function deriveBracket(state: PicksState): DerivedBracket {
       makeKO(
         `K${17 + i}`,
         "R16",
-        2,
         a,
         b,
         state.knockoutPicks,
+        state.knockoutGoals,
         16 + i,
         !r16Unlocked,
+        liveElo,
         official,
       ),
     );
@@ -431,12 +479,13 @@ export function deriveBracket(state: PicksState): DerivedBracket {
       makeKO(
         `K${25 + i}`,
         "QF",
-        3,
         a,
         b,
         state.knockoutPicks,
+        state.knockoutGoals,
         24 + i,
         !qfUnlocked,
+        liveElo,
         official,
       ),
     );
@@ -451,12 +500,13 @@ export function deriveBracket(state: PicksState): DerivedBracket {
       makeKO(
         `K${29 + i}`,
         "SF",
-        4,
         a,
         b,
         state.knockoutPicks,
+        state.knockoutGoals,
         28 + i,
         true,
+        liveElo,
         official,
       ),
     );
@@ -467,12 +517,13 @@ export function deriveBracket(state: PicksState): DerivedBracket {
     final = makeKO(
       "K31",
       "Final",
-      6,
       sf[0].winnerTeam,
       sf[1].winnerTeam,
       state.knockoutPicks,
+      state.knockoutGoals,
       31,
       true,
+      liveElo,
       official,
     );
   }

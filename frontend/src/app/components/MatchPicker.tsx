@@ -29,11 +29,12 @@ function getNumericMatchId(idStr: string): number {
 
 export function MatchPicker({ match, onPick, mode }: Props) {
   const homeWin = match.winner === "home";
-  const { setKoGoals, state } = usePicks();
+  const { setKoGoals, setKoWinner, state } = usePicks();
   const goalsEditable = mode === "live" && GOAL_EDITABLE_ROUNDS.has(match.round);
   const userGoals = state.knockoutGoals?.[match.matchId];
-  const displayHomeGoals = userGoals?.home ?? match.homeGoals;
-  const displayAwayGoals = userGoals?.away ?? match.awayGoals;
+  // makeKO already folds these overrides into the match, so match.{home,away}Goals are authoritative.
+  const displayHomeGoals = match.homeGoals;
+  const displayAwayGoals = match.awayGoals;
   // A knockout cannot end level: a level scoreline means it was decided on penalties. This stays
   // coherent even when the user nudges the goals to a draw with the steppers — `match.winnerTeam`
   // (the ML advancer, or the side the user crowned) goes through on the shootout.
@@ -44,6 +45,11 @@ export function MatchPicker({ match, onPick, mode }: Props) {
     const curr = userGoals ?? { home: match.homeGoals, away: match.awayGoals };
     const next = { ...curr, [side]: Math.max(0, Math.min(20, curr[side] + delta)) };
     setKoGoals(match.matchId, next);
+    // Keep the crowned team in sync with the scoreline: a decisive edit auto-switches the winner to
+    // the higher-scoring side; a level edit leaves the current pick to advance on penalties.
+    if (next.home !== next.away) {
+      setKoWinner(match.matchId, next.home > next.away ? "home" : "away");
+    }
   }
 
   return (
@@ -56,7 +62,7 @@ export function MatchPicker({ match, onPick, mode }: Props) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="display text-[11px] tracking-[0.2em] text-muted-foreground">
-            {ROUND_LABEL[match.round]} · ×{match.multiplier} · #{getNumericMatchId(match.matchId)}
+            {ROUND_LABEL[match.round]} · #{getNumericMatchId(match.matchId)}
           </span>
           {showPens && (
             <span className="text-[10px] display tracking-widest text-[var(--stamp-red)] border border-[var(--stamp-red)] px-1 rounded">
@@ -64,7 +70,12 @@ export function MatchPicker({ match, onPick, mode }: Props) {
             </span>
           )}
         </div>
-        {mode === "locked" && match.autoPredicted && (
+        {match.official ? (
+          <span className="text-[10px] display tracking-widest px-1 rounded border"
+            style={{ color: "var(--stamp-red)", borderColor: "var(--stamp-red)" }}>
+            FINAL · OFFICIAL
+          </span>
+        ) : mode === "locked" && match.autoPredicted && (
           <span className="text-[10px] mono uppercase text-muted-foreground">
             ML pick
           </span>
@@ -81,17 +92,19 @@ export function MatchPicker({ match, onPick, mode }: Props) {
         )}
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
+      <div className="grid grid-cols-[1fr_5.5rem_1fr] items-center gap-2 sm:gap-3">
         <div className="flex justify-center min-w-0">
           <TeamSticker
             team={match.home}
             size="sm"
+            eloOverride={match.homeElo}
             selected={mode !== "preview" && homeWin}
             dim={mode !== "preview" && !homeWin}
             onClick={mode === "live" ? () => onPick?.("home") : undefined}
           />
         </div>
-        <div className="text-center px-1">
+        {/* Fixed-width centre column so a penalty caption never squeezes the team cards out of shape. */}
+        <div className="text-center px-0.5 w-[5.5rem] mx-auto">
           {mode === "preview" ? (
             <div className="display text-2xl text-muted-foreground">vs</div>
           ) : (
@@ -106,8 +119,8 @@ export function MatchPicker({ match, onPick, mode }: Props) {
             </div>
           )}
           {showPens && (
-            <div className="text-[9px] mono uppercase tracking-wider text-[var(--stamp-red)] mt-1">
-              {match.winnerTeam.name} win on penalties
+            <div className="text-[9px] mono uppercase tracking-wider text-[var(--stamp-red)] mt-1 leading-tight break-words">
+              {match.winnerTeam.name} win on pens
             </div>
           )}
           <div className="text-[9px] mono uppercase tracking-wider text-muted-foreground mt-1">
@@ -118,6 +131,7 @@ export function MatchPicker({ match, onPick, mode }: Props) {
           <TeamSticker
             team={match.away}
             size="sm"
+            eloOverride={match.awayElo}
             selected={mode !== "preview" && !homeWin}
             dim={mode !== "preview" && homeWin}
             onClick={mode === "live" ? () => onPick?.("away") : undefined}

@@ -180,10 +180,11 @@ function KnockoutStage({
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {matches.map((m, i) => (
           <div key={m.matchId}>
+            {/* An admin-finalised match is locked: players can't change it and it drives the ML pick. */}
             <MatchPicker
               match={m}
-              mode="live"
-              onPick={(side) => setKoWinner(m.matchId, side)}
+              mode={m.official ? "locked" : "live"}
+              onPick={m.official ? undefined : (side) => setKoWinner(m.matchId, side)}
             />
             {round === "R32" && i === 5 && (
               <div className="sm:col-span-2 lg:col-span-3">
@@ -515,7 +516,7 @@ function ResultsVote({
           type="text"
           value={voterName}
           onChange={(e) => setVoterName(e.target.value)}
-          placeholder="e.g. Ahbab"
+          placeholder="Your name"
           className="w-full rounded-md border-2 border-foreground/20 bg-background px-3 py-2 text-sm focus:outline-none focus:border-foreground transition-colors font-medium"
           maxLength={30}
           required

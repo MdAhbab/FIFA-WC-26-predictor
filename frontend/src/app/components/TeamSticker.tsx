@@ -8,6 +8,8 @@ interface Props {
   onClick?: () => void;
   badge?: string;
   rotation?: number;
+  /** Show this Elo instead of the team's base rating (e.g. the live, boosted knockout Elo). */
+  eloOverride?: number;
 }
 
 const SIZE: Record<NonNullable<Props["size"]>, { box: string; flag: number; pad: string; name: string }> = {
@@ -29,9 +31,12 @@ export function TeamSticker({
   onClick,
   badge,
   rotation = 0,
+  eloOverride,
 }: Props) {
   const s = SIZE[size];
   const w = snapFlagW(s.flag * 2);
+  const elo = eloOverride ?? team.elo;
+  const boosted = eloOverride !== undefined && eloOverride > team.elo;
   return (
     <button
       type="button"
@@ -75,8 +80,12 @@ export function TeamSticker({
           <div className={`display leading-tight ${s.name} truncate`}>
             {team.name}
           </div>
-          <div className="text-[10px] mono text-muted-foreground tracking-wider">
-            ELO {team.elo}
+          <div
+            className="text-[10px] mono tracking-wider"
+            style={{ color: boosted ? "var(--foil-gold)" : "var(--muted-foreground)" }}
+          >
+            ELO {elo}
+            {boosted && <span className="ml-0.5">▲</span>}
           </div>
         </div>
       </div>

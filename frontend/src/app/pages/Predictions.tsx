@@ -162,8 +162,8 @@ function GroupCard({
                 {idx + 1}
               </span>
               <TeamBadge name={s.team.name} iso={s.team.iso} size={22} />
-              <span className="ml-auto mono text-[10px] text-muted-foreground tabular-nums">
-                {s.pts} pts · {s.gf}-{s.ga}
+              <span className="ml-auto mono text-[10px] tabular-nums text-muted-foreground">
+                <span style={{ color: "var(--foil-blue)" }}>{s.team.elo}</span> elo · {s.pts}p · {s.gf}-{s.ga}
               </span>
             </li>
           );
@@ -283,8 +283,7 @@ function KnockoutColumn({
               }
               className="text-left w-full rounded-md border border-foreground/15 bg-card px-3 py-2 hover:border-foreground/40 transition-colors"
             >
-              <div className="flex items-center justify-between text-[10px] mono uppercase tracking-wider text-muted-foreground mb-1">
-                <span>×{m.multiplier}</span>
+              <div className="flex items-center justify-end text-[10px] mono uppercase tracking-wider text-muted-foreground mb-1">
                 <span className="flex items-center gap-1.5">
                   {isLevel && (
                     <span style={{ color: "var(--stamp-red)" }}>
@@ -319,6 +318,11 @@ function KnockoutColumn({
                   reverse
                   className={homeWin ? "opacity-50" : ""}
                 />
+              </div>
+              {/* Live Elo — climbs with each round survived (group bonus + goal + stage boosts). */}
+              <div className="mt-1 flex items-center justify-between text-[9px] mono tabular-nums text-muted-foreground/80">
+                <span>ELO {m.homeElo}</span>
+                <span>ELO {m.awayElo}</span>
               </div>
             </button>
           );
