@@ -3,9 +3,9 @@ import { CONTACT_EMAIL } from "../lib/site";
 
 export default function Disclaimer() {
   useSEO({
-    title: "Disclaimer · FIFA World Cup '26 Predictor",
+    title: "Disclaimer · FIFA Worldcup Predictor",
     description:
-      "Disclaimer for the FIFA World Cup '26 Predictor — entertainment-only ML predictions, not betting advice.",
+      "Disclaimer for the FIFA Worldcup Predictor — entertainment-only ML predictions, not betting advice.",
   });
 
   return (
@@ -38,7 +38,7 @@ export default function Disclaimer() {
       <article className="space-y-6 text-muted-foreground leading-relaxed">
         <Section title="No affiliation with FIFA">
           <p>
-            FIFA World Cup '26 Predictor is an independent, fan-made content
+            FIFA Worldcup Predictor is an independent, fan-made content
             project. It is not produced, endorsed, sponsored or otherwise
             connected to FIFA, the 2026 FIFA World Cup organising committee,
             any participating football federation, or any official broadcaster

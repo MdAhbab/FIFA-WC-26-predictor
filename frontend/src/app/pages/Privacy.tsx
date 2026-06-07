@@ -3,9 +3,9 @@ import { CONTACT_EMAIL, SITE_DOMAIN } from "../lib/site";
 
 export default function Privacy() {
   useSEO({
-    title: "Privacy Policy · FIFA World Cup '26 Predictor",
+    title: "Privacy Policy · FIFA Worldcup Predictor",
     description:
-      "How the FIFA World Cup '26 Predictor handles your data, cookies, sessions and third-party services.",
+      "How the FIFA Worldcup Predictor handles your data, cookies, sessions and third-party services.",
   });
 
   return (
@@ -23,7 +23,7 @@ export default function Privacy() {
       <article className="space-y-6 text-muted-foreground leading-relaxed">
         <Section title="Who we are">
           <p>
-            FIFA World Cup '26 Predictor (&ldquo;the Site&rdquo;, &ldquo;we&rdquo;,
+            FIFA Worldcup Predictor (&ldquo;the Site&rdquo;, &ldquo;we&rdquo;,
             &ldquo;us&rdquo;) is an independent hobby project that publishes
             machine-learning predictions for the 2026 FIFA World Cup at{" "}
             <span className="text-foreground">{SITE_DOMAIN}</span>. The Site is not

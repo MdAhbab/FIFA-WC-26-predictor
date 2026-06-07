@@ -29,7 +29,7 @@ const NEXT_STAGE: Record<Stage, Stage> = {
 
 export default function Play() {
   useSEO({
-    title: "Play · FIFA World Cup '26 Predictor",
+    title: "Play · FIFA Worldcup Predictor",
     description:
       "Pick the 2026 FIFA World Cup yourself: rank the groups, choose the knockouts, hand it over to the ML for the final stretch.",
   });

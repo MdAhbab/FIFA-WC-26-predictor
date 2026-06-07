@@ -3,9 +3,9 @@ import { AdSlot } from "../components/AdSlot";
 
 export default function Methodology() {
   useSEO({
-    title: "Methodology · FIFA World Cup '26 Predictor",
+    title: "Methodology · FIFA Worldcup Predictor",
     description:
-      "How the FIFA World Cup '26 Predictor engine works: 2014–2026 international data, tanh-compressed Elo, Poisson goal model, tournament-form bias, and pre-computed championship probabilities.",
+      "How the FIFA Worldcup Predictor engine works: 2014–2026 international data, tanh-compressed Elo, Poisson goal model, tournament-form bias, and pre-computed championship probabilities.",
   });
 
   return (

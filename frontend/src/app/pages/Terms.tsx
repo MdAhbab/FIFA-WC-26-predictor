@@ -3,9 +3,9 @@ import { CONTACT_EMAIL, SITE_DOMAIN } from "../lib/site";
 
 export default function Terms() {
   useSEO({
-    title: "Terms & Conditions · FIFA World Cup '26 Predictor",
+    title: "Terms & Conditions · FIFA Worldcup Predictor",
     description:
-      "Terms and conditions for using the FIFA World Cup '26 Predictor website.",
+      "Terms and conditions for using the FIFA Worldcup Predictor website.",
   });
 
   return (
@@ -23,7 +23,7 @@ export default function Terms() {
       <article className="space-y-6 text-muted-foreground leading-relaxed">
         <Section title="1. Acceptance of these terms">
           <p>
-            By accessing or using FIFA World Cup '26 Predictor (&ldquo;the Site&rdquo;) at{" "}
+            By accessing or using FIFA Worldcup Predictor (&ldquo;the Site&rdquo;) at{" "}
             <span className="text-foreground">{SITE_DOMAIN}</span> you agree to be bound by these
             Terms &amp; Conditions and by our Privacy Policy and Disclaimer, which are incorporated
             by reference. If you do not agree, please stop using the Site. These Terms apply to all

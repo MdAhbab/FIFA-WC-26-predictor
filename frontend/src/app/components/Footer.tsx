@@ -10,14 +10,14 @@ export function Footer() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
         <img
           src={logoUrl}
-          alt="FIFA World Cup '26 Predictor"
+          alt="FIFA Worldcup Predictor"
           className="h-20 sm:h-24 w-auto object-contain shrink-0"
         />
 
         <div className="flex-1 min-w-0 grid sm:grid-cols-2 gap-x-8 gap-y-4">
           <div>
             <div className="display text-base sm:text-lg tracking-wide">
-              FIFA WORLD CUP 26 PREDICTOR
+              FIFA WORLDCUP PREDICTOR
             </div>
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
               A pocket guide to the 2026 FIFA World Cup, written by an

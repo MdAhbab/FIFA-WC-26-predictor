@@ -11,7 +11,7 @@ import { useSEO } from "../lib/useSEO";
 
 export default function Predictions() {
   useSEO({
-    title: "The Model's Pick · FIFA World Cup '26 Predictor",
+    title: "The Model's Pick · FIFA Worldcup Predictor",
     description:
       "What the ML model actually predicts for the 2026 FIFA World Cup — every group, every knockout, every score.",
   });

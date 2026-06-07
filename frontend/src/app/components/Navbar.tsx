@@ -16,15 +16,15 @@ export function Navbar() {
         <NavLink to="/" className="flex items-center gap-3 group min-w-0">
           <img
             src={logoUrl}
-            alt="FIFA World Cup '26 Predictor"
+            alt="FIFA Worldcup Predictor"
             className="h-14 sm:h-16 w-auto object-contain shrink-0 group-hover:-translate-y-0.5 group-hover:rotate-[-3deg] transition-transform"
           />
           <span className="flex flex-col leading-none min-w-0">
             <span className="display text-base sm:text-xl tracking-[0.02em] truncate">
-              FIFA WORLD CUP '26
+              FIFA WORLDCUP
             </span>
             <span className="mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground truncate">
-              Predictor · ML matchday album
+              PREDICTOR
             </span>
           </span>
         </NavLink>

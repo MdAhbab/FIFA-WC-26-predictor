@@ -6,7 +6,7 @@ interface SEO {
   image?: string;
 }
 
-const SITE_NAME = "FIFA World Cup '26 Predictor";
+const SITE_NAME = "FIFA Worldcup Predictor";
 const DEFAULT_IMAGE = "/og-image.png";
 
 function setMeta(name: string, content: string, attr: "name" | "property" = "name") {

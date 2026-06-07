@@ -11,7 +11,7 @@ import { RecentNews } from "../components/RecentNews";
 
 export default function Home() {
   useSEO({
-    title: "FIFA World Cup '26 Predictor — Pick groups, plan knockouts, let the ML finish",
+    title: "predict the champs",
     description:
       "A gamified, ML-powered predictor for the 2026 FIFA World Cup. Pick your groups, plan the knockouts, let the model finish the job.",
   });
@@ -45,8 +45,8 @@ export default function Home() {
               transition={{ duration: 0.5 }}
               className="leading-[0.92]"
             >
-              <span className="block">FIFA WORLD CUP</span>
-              <span className="foil-text block">'26 PREDICTOR</span>
+              <span className="block">FIFA WORLDCUP</span>
+              <span className="foil-text block">PREDICTOR</span>
             </motion.h1>
 
             <p className="max-w-md text-muted-foreground">
