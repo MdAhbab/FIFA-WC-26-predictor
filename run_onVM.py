@@ -57,7 +57,46 @@ def is_venv() -> bool:
     return sys.prefix != sys.base_prefix or hasattr(sys, "real_prefix")
 
 
+def kill_previous_instances(port: int):
+    import signal
+    import time
+    current_pid = os.getpid()
+    # Kill any other process running 'run_onVM.py'
+    try:
+        out = subprocess.check_output(["pgrep", "-f", "run_onVM.py"]).decode()
+        for pid_str in out.strip().split():
+            if not pid_str: continue
+            pid = int(pid_str)
+            if pid != current_pid:
+                print(f"[run_onVM] Stopping previous instance (PID: {pid})...")
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except OSError:
+                    pass
+        time.sleep(1)
+    except Exception:
+        pass
+    # Double check the port is free
+    try:
+        out = subprocess.check_output(["fuser", f"{port}/tcp"], stderr=subprocess.DEVNULL).decode()
+        for pid_str in out.strip().split():
+            if not pid_str: continue
+            pid = int(pid_str)
+            if pid != current_pid:
+                print(f"[run_onVM] Freeing port {port} (killing PID: {pid})...")
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except OSError:
+                    pass
+        time.sleep(1)
+    except Exception:
+        pass
+
+
 def main():
+    port_env = int(os.environ.get("WC_PORT", os.environ.get("PORT", DEFAULT_PORT)))
+    kill_previous_instances(port_env)
+
     venv_path = ROOT / ".venv"
     if not is_venv() and venv_path.exists():
         python_exe = venv_path / "bin" / "python3"
