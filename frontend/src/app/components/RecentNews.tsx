@@ -51,7 +51,7 @@ export function RecentNews() {
           <Loader2 className="size-5 animate-spin" /> Loading the latest…
         </div>
       ) : (
-        <div className="max-h-[460px] overflow-y-auto pr-1 space-y-3 [scrollbar-width:thin]">
+        <div className="max-h-[460px] overflow-y-auto pr-1 space-y-3 custom-scrollbar">
           {items.map((n) => (
             <a
               key={n.id}

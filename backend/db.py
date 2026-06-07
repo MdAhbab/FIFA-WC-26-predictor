@@ -15,6 +15,10 @@ DB_PATH = Path(os.environ.get("WC_DB_PATH", Path(__file__).resolve().parent / "w
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 _LOCK = Lock()
 
+# Feature flag to easily bypass the 12-hour IP-based rate limit for testing.
+# Set to True to disable rate limits; set to False to re-enable them.
+DISABLE_RATE_LIMIT = False
+
 
 def _conn():
     c = sqlite3.connect(DB_PATH)
@@ -258,6 +262,9 @@ def verify_admin(username: str, password: str) -> bool:
 # ---------------------------------------------------------------------------
 def has_voted_recently(ip: str) -> tuple[bool, int]:
     """Check if IP voted in last 12 hours. Returns (voted, seconds_remaining)."""
+    if DISABLE_RATE_LIMIT:
+        return False, 0
+
     if not ip:
         return False, 0
     with _LOCK, _conn() as c:

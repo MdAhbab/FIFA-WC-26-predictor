@@ -13,6 +13,8 @@ import { TeamSticker } from "../components/TeamSticker";
 import { AdSlot } from "../components/AdSlot";
 import { StrengthPanel } from "../components/StrengthPanel";
 import { useVotes } from "../lib/VotesContext";
+import { ShareStory } from "../components/ShareStory";
+import { shortRefUrl } from "../lib/share";
 import { Check } from "lucide-react";
 import { api } from "../lib/api";
 
@@ -298,6 +300,7 @@ function ResultsStage({
           refreshShared={refreshShared}
         />
       ) : (
+        <>
         <section className="mt-6 rounded-[14px] border-2 border-foreground bg-card p-5 text-center shadow-[4px_4px_0_var(--foil-blue)]">
           <h2 className="display tracking-wide font-bold" style={{ color: "var(--pitch)" }}>🎉 Finalists Locked!</h2>
           <p className="text-sm mt-1">
@@ -311,13 +314,13 @@ function ResultsStage({
               <input
                 type="text"
                 readOnly
-                value={`${window.location.origin}/play?ref=${myVoteId}`}
+                value={shortRefUrl(myVoteId)}
                 className="flex-1 rounded-md border-2 border-foreground/20 bg-background px-3 py-2 text-xs focus:outline-none"
                 onClick={(e) => (e.target as HTMLInputElement).select()}
               />
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/play?ref=${myVoteId}`);
+                  navigator.clipboard.writeText(shortRefUrl(myVoteId));
                   alert("Link copied to clipboard!");
                 }}
                 className="rounded-md bg-foreground text-background display uppercase tracking-wider px-3 py-1.5 text-xs hover:bg-muted font-bold"
@@ -327,6 +330,16 @@ function ResultsStage({
             </div>
           </div>
         </section>
+        {champion && myVoteId && (
+          <ShareStory
+            userName={myUniqueName ?? "A fan"}
+            championName={champion.name}
+            championIso={champion.iso}
+            championElo={bracket.championElo}
+            voteId={myVoteId}
+          />
+        )}
+        </>
       )}
 
       {sharedData && (

@@ -119,8 +119,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Recent football news — vertically scrollable rail directly below the hero */}
-      <RecentNews />
+
 
       {/* How it works */}
       <section className="mt-10 grid sm:grid-cols-3 gap-4">
@@ -200,6 +199,9 @@ export default function Home() {
       </section>
 
       <AdSlot variant="rectangle" />
+
+      {/* Recent football news — vertically scrollable rail at the bottom of the page */}
+      <RecentNews />
     </main>
   );
 }

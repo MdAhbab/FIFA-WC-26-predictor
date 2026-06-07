@@ -28,6 +28,9 @@ let scriptInjected = false;
 function ensureAdScript() {
   if (scriptInjected || !CLIENT || typeof document === "undefined") return;
   scriptInjected = true;
+  // index.html already ships the AdSense loader for site verification — don't add a second copy
+  // (a duplicate adsbygoogle.js tag triggers console errors and can break ad fill).
+  if (document.querySelector('script[src*="adsbygoogle.js"]')) return;
   const s = document.createElement("script");
   s.async = true;
   s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${CLIENT}`;

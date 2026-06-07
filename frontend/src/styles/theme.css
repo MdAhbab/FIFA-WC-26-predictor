@@ -230,3 +230,59 @@
 }
 .display { font-family: var(--font-display); letter-spacing: 0.005em; }
 .mono { font-family: var(--font-mono); }
+
+/* --- Custom Theme Scrollbars --- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border: 2px solid var(--background);
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foil-magenta);
+}
+
+/* Specific custom scrollbar for news component and other tight scroll rails */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(20, 24, 43, 0.45);
+  border-radius: 999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 1px solid var(--card);
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--foil-magenta);
+  box-shadow: 0 0 6px var(--foil-magenta);
+}
+
+/* Firefox compatibility */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) var(--background);
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) rgba(20, 24, 43, 0.45);
+}

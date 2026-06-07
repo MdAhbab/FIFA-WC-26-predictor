@@ -47,7 +47,7 @@ _load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response as RawResponse
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse, Response as RawResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -611,6 +611,28 @@ def vote_shared(vote_id: int):
 @app.get("/api/votes")
 def votes():
     return db.vote_summary(VALID_TEAMS)
+
+
+# Short referral links: /s/<base62(vote_id)> -> /play?ref=<vote_id>. Keeps shared URLs tiny for
+# story/QR sharing. The alphabet here MUST match the frontend encoder in lib/share.ts.
+_B62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+
+def _b62_decode(s: str) -> int | None:
+    n = 0
+    for ch in s:
+        i = _B62.find(ch)
+        if i < 0:
+            return None
+        n = n * 62 + i
+    return n
+
+
+@app.get("/s/{code}")
+def short_ref(code: str):
+    vid = _b62_decode(code)
+    target = f"/play?ref={vid}" if (vid and vid > 0) else "/play"
+    return RedirectResponse(url=target, status_code=302)
 
 
 # ---- Admin: finalised official results (continual learning) ----

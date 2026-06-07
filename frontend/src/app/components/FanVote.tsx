@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect } from "react";
 import { Check, Trophy, Vote as VoteIcon, Copy } from "lucide-react";
 import { TEAMS } from "../lib/data";
 import { useVotes } from "../lib/VotesContext";
+import { ShareStory } from "./ShareStory";
+import { shortRefUrl } from "../lib/share";
 
 const ISO_BY_NAME: Record<string, string> = {};
 
@@ -126,14 +128,14 @@ export function FanVote() {
               <input
                 type="text"
                 readOnly
-                value={`${window.location.origin}/play?ref=${myVoteId}`}
+                value={shortRefUrl(myVoteId)}
                 className="flex-1 rounded-md border-2 border-foreground/20 bg-background px-3 py-2 text-xs focus:outline-none"
                 onClick={(e) => (e.target as HTMLInputElement).select()}
               />
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/play?ref=${myVoteId}`);
+                  navigator.clipboard.writeText(shortRefUrl(myVoteId));
                   alert("Link copied to clipboard!");
                 }}
                 className="inline-flex items-center gap-1.5 rounded-md bg-foreground text-background display uppercase tracking-wider px-3 py-1.5 text-xs hover:bg-muted font-bold cursor-pointer"
@@ -143,6 +145,15 @@ export function FanVote() {
               </button>
             </div>
           </div>
+          {t1 && myVoteId && (
+            <ShareStory
+              userName={myUniqueName ?? "A fan"}
+              championName={t1}
+              championIso={ISO_BY_NAME[t1] ?? ""}
+              championElo={null}
+              voteId={myVoteId}
+            />
+          )}
         </div>
       )}
 

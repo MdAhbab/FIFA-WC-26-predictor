@@ -231,6 +231,8 @@ export interface DerivedBracket {
   sf: KnockoutResult[];
   final: KnockoutResult | null;
   champion: RawTeam | null;
+  /** The champion's live Elo after lifting the cup (base + group + every knockout boost). */
+  championElo: number | null;
 }
 
 function applyUserPick(
@@ -531,13 +533,15 @@ export function deriveBracket(state: PicksState): DerivedBracket {
     );
   }
 
+  const champion = final ? final.winnerTeam : null;
   return {
     groups,
     effectiveStandings,
     bestThirds,
     qualifiers,
     r32, r16, qf, sf, final,
-    champion: final ? final.winnerTeam : null,
+    champion,
+    championElo: champion ? Math.round(liveElo.get(champion.name) ?? champion.elo) : null,
   };
 }
 
