@@ -217,13 +217,6 @@ def _bump_seo():
         _LAST_MODIFIED = datetime.now(timezone.utc)
 
 
-def _current_champion() -> str:
-    try:
-        return str(get_payload({}, MC_BASE_SIMS).get("meta", {}).get("champion") or "")
-    except Exception:
-        return ""
-
-
 def _set_title(html_text: str, title: str) -> str:
     return re.sub(r"<title>.*?</title>", f"<title>{_html.escape(title)}</title>",
                   html_text, count=1, flags=re.S)
@@ -236,30 +229,24 @@ def _set_meta(html_text: str, attr: str, name: str, content: str) -> str:
 
 
 def _render_index() -> str:
-    """index.html with SEO title/description/OG re-rendered for the current champion + last-updated."""
+    """Serve index.html with a STATIC SEO title (never reveals the predicted winner) and a fresh
+    last-updated stamp. The description stays generic so a shared link reads 'FIFA Worldcup 2026
+    Match Predictor', not 'X projected to win'."""
     global _INDEX_RAW, _INDEX_RENDERED, _INDEX_KEY
     with _SEO_LOCK:
         if _INDEX_RAW is None:
             _INDEX_RAW = (DIST / "index.html").read_text(encoding="utf-8")
         last = _LAST_MODIFIED
         seo_gen = _SEO_GEN
-    champ = _current_champion()
-    results_applied = len(_RESULTS)
-    key = (seo_gen, champ, results_applied)
+    key = (seo_gen,)
     with _SEO_LOCK:
         if _INDEX_KEY == key and _INDEX_RENDERED is not None:
             return _INDEX_RENDERED
-    updated = last.strftime("%B ") + str(last.day) + last.strftime(", %Y")
     iso = last.isoformat()
-    if champ:
-        title = f"FIFA World Cup 2026 Predictor — {champ} projected to win"
-        desc = (f"Updated {updated}: the ML model currently projects {champ} to win the 2026 FIFA World Cup"
-                + (f" ({results_applied} official results factored in)" if results_applied else "")
-                + ". Group forecasts, full knockout bracket and Monte-Carlo champion odds. Entertainment only.")
-    else:
-        title = "FIFA World Cup 2026 Predictor — ML Bracket, Group & Knockout Predictions"
-        desc = ("Free ML-powered FIFA World Cup 2026 predictor: group forecasts, full knockout bracket, "
-                "champion odds from Monte-Carlo simulations. Build your own bracket and vote. Entertainment only.")
+    title = "FIFA Worldcup 2026 Match Predictor"
+    desc = ("Free ML-powered FIFA World Cup 2026 match predictor: group forecasts, full knockout "
+            "bracket and champion odds from Monte-Carlo simulations. Build your own bracket and vote. "
+            "Entertainment only.")
     html_text = _set_title(_INDEX_RAW, title)
     for a, n in (("name", "description"), ("property", "og:description"), ("name", "twitter:description")):
         html_text = _set_meta(html_text, a, n, desc)
