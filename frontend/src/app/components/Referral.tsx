@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Copy, Link2, Users } from "lucide-react";
+import { Copy, Link2, Search, Users } from "lucide-react";
 import { api } from "../lib/api";
 import { shortRefUrl } from "../lib/share";
+import { saveMyVote } from "../lib/identity";
 import type { SharedVoteData, SharedVoter } from "../lib/types";
 
 function topPicks(v: SharedVoter | null | undefined): string {
@@ -101,6 +102,67 @@ export function FriendsComparison({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * Recovery path for when localStorage is gone (cleared data / different device): look your hub up by
+ * the name you played under. On success it re-saves your identity locally and reveals the hub.
+ */
+export function FindMyHub({ onFound }: { onFound: (voteId: number, name: string) => void }) {
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function find() {
+    if (!name.trim()) {
+      setErr("Enter the name you played under.");
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      const r = await api.findVote(name.trim());
+      saveMyVote({ voteId: r.vote_id, name: r.name });
+      onFound(r.vote_id, r.name);
+    } catch {
+      setErr("No hub found for that name. Check the spelling, or open your referral link.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <details className="mt-4 rounded-md border-2 border-foreground/15 bg-background/40">
+      <summary className="cursor-pointer list-none px-3 py-2 flex items-center gap-2 select-none text-xs display uppercase tracking-wider text-muted-foreground">
+        <Search className="size-3.5" /> Lost your link? Find your referral hub
+      </summary>
+      <div className="px-3 pb-3 pt-1">
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Already played? Enter the exact name you used to get your link and referrals back.
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && find()}
+            placeholder="The name you played under"
+            className="flex-1 rounded-md border-2 border-foreground/20 bg-background px-3 py-2 text-sm focus:outline-none focus:border-foreground"
+            maxLength={30}
+          />
+          <button
+            type="button"
+            onClick={find}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md bg-foreground text-background display uppercase tracking-wider px-3 py-1.5 text-xs hover:bg-muted font-bold disabled:opacity-50"
+          >
+            {busy ? "…" : "Find"}
+          </button>
+        </div>
+        {err && <div className="text-[11px] mt-1.5" style={{ color: "var(--stamp-red)" }}>{err}</div>}
+      </div>
+    </details>
   );
 }
 

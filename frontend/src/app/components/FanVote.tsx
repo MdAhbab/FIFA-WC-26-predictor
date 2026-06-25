@@ -3,7 +3,7 @@ import { Trophy, Vote as VoteIcon } from "lucide-react";
 import { TEAMS } from "../lib/data";
 import { useVotes } from "../lib/VotesContext";
 import { ShareStory } from "./ShareStory";
-import { ReferralDashboard } from "./Referral";
+import { ReferralDashboard, FindMyHub } from "./Referral";
 import { loadMyVote, saveMyVote } from "../lib/identity";
 
 const ISO_BY_NAME: Record<string, string> = {};
@@ -92,6 +92,7 @@ export function FanVote() {
       </p>
 
       {!myVoteId ? (
+        <>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid sm:grid-cols-[1.2fr_1fr_1fr] gap-3 items-end">
             <div>
@@ -128,6 +129,13 @@ export function FanVote() {
           </div>
           {err && <div className="text-xs mt-1" style={{ color: "var(--stamp-red)" }}>{err}</div>}
         </form>
+        <FindMyHub
+          onFound={(id, name) => {
+            setMyVoteId(id);
+            setMyUniqueName(name);
+          }}
+        />
+        </>
       ) : (
         <div className="space-y-4">
           <div className="rounded-lg border-2 border-foreground bg-background/50 p-4 text-center shadow-inner">

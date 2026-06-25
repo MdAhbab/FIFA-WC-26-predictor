@@ -671,6 +671,15 @@ def vote_shared(vote_id: int):
     return data
 
 
+@app.get("/api/vote/find")
+def vote_find(name: str = ""):
+    """Recover a referral hub by the display name the user voted under (most recent match)."""
+    res = db.find_latest_vote_by_name(name)
+    if not res:
+        raise HTTPException(404, "No referral hub found for that name.")
+    return res
+
+
 @app.get("/api/votes")
 def votes():
     return db.vote_summary(VALID_TEAMS)

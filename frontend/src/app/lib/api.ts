@@ -44,6 +44,8 @@ export const api = {
   vote: (body: { team1: string; team2?: string; champion?: string; name?: string; referrer_vote_id?: number; payload?: unknown }) =>
     postJSON<{ ok: boolean; vote_id: number; name: string; votes: VoteSummary }>("/vote", body),
   voteShared: (voteId: number) => getJSON<SharedVoteData>(`/vote/shared/${voteId}`),
+  findVote: (name: string) =>
+    getJSON<{ vote_id: number; name: string }>(`/vote/find?name=${encodeURIComponent(name)}`),
   votes: () => getJSON<VoteSummary>("/votes"),
   match: (home: string, away: string, matchId?: number) =>
     getJSON<MatchDetail>(

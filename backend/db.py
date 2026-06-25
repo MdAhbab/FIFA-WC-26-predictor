@@ -392,6 +392,22 @@ def _decorate(row: dict) -> dict:
     return d
 
 
+def find_latest_vote_by_name(name: str) -> dict | None:
+    """Recover a referral hub by the display name the user entered (most recent match wins).
+    Used by the 'find my hub' lookup so a user who cleared their browser / switched device can still
+    reach their link, referrals and top-4 picks. Returns {vote_id, name} or None."""
+    n = (name or "").strip()
+    if not n:
+        return None
+    with _LOCK, _conn() as c:
+        row = c.execute(
+            "SELECT id, name FROM votes WHERE name IS NOT NULL AND LOWER(name)=LOWER(?) "
+            "ORDER BY id DESC LIMIT 1",
+            (n,),
+        ).fetchone()
+    return {"vote_id": row["id"], "name": row["name"]} if row else None
+
+
 def get_shared_vote_details(vote_id: int) -> dict | None:
     """Fetch referrer vote details, referred friends' votes, and the parent vote who referred the host.
     Every returned voter carries their `top4` picks so the comparison can show full top lists, not

@@ -316,7 +316,7 @@ function ResultsStage({
         </>
       )}
 
-      {sharedData && (
+      {sharedData && refId !== myVoteId && (
         <section className="mt-8 rounded-[14px] border-2 border-foreground bg-card p-5">
           <h2 className="display tracking-wide mb-1">
             Comparing top-4 picks with {sharedData.referrer.name}'s bracket

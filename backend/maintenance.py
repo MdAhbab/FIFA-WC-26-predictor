@@ -7,7 +7,8 @@ inside the running container and it targets the live DB automatically:
     docker compose exec predictor python maintenance.py stats
     docker compose exec predictor python maintenance.py scale-votes 37
     docker compose exec predictor python maintenance.py reset-shares
-    docker compose exec predictor python maintenance.py seed-standings        # from datasets/current_standings.csv
+    docker compose exec predictor python maintenance.py seed-results          # real group results -> official_results
+    docker compose exec predictor python maintenance.py seed-standings        # admin standings overrides (optional)
 
 Outside Docker, point it at a DB explicitly:
     WC_DB_PATH=/path/to/wc26.db python maintenance.py stats
@@ -135,6 +136,77 @@ def seed_standings(csv_path: str | None) -> None:
     print(f"Seeded standings for {len(groups)} group(s). Restart the app to apply.")
 
 
+# Web/Wikipedia spellings -> the app's canonical team names.
+_ALIASES = {
+    "united states": "USA", "usa": "USA",
+    "ivory coast": "Côte d'Ivoire", "cote d'ivoire": "Côte d'Ivoire",
+    "cape verde": "Cabo Verde",
+}
+
+
+def seed_results(csv_path: str | None) -> None:
+    """Apply real group results from a CSV (default datasets/current_results.csv) as official results.
+
+    Each row is (home, away, hg, ag) in real-world orientation; we match the pair to the app fixture
+    (playoff slots already resolved by the engine), flip the score to the fixture's orientation, and
+    upsert it. Played matches make the standings count for real and re-run the ML; a fully-played group
+    auto-locks. Remaining matchday-3 games can be added to the CSV later and re-seeded."""
+    import engine
+    db.init_db()
+    path = Path(csv_path) if csv_path else (Path(__file__).resolve().parent / "datasets" / "current_results.csv")
+    if not path.exists():
+        print(f"CSV not found: {path}", file=sys.stderr)
+        sys.exit(1)
+
+    gf, _ks, _groups, valid = engine.load_fixtures()
+    valid_lower = {t.lower(): t for t in valid}
+
+    def canon(name: str) -> str | None:
+        n = name.strip()
+        if n.lower() in _ALIASES:
+            return _ALIASES[n.lower()]
+        return valid_lower.get(n.lower())
+
+    # pair (frozenset of names) -> (match_id, fixture_home, fixture_away, group)
+    pair_map: dict[frozenset, tuple] = {}
+    for r in gf.itertuples(index=False):
+        pair_map[frozenset((r.home_team, r.away_team))] = (int(r.match_id), r.home_team, r.away_team, r.group)
+
+    applied, skipped = 0, []
+    with open(path, encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#") or line.lower().startswith("home,"):
+                continue
+            parts = next(csv.reader([line]))
+            if len(parts) < 4:
+                continue
+            h, a, hg, ag = parts[0], parts[1], parts[2], parts[3]
+            ch, ca = canon(h), canon(a)
+            if not ch or not ca:
+                skipped.append(f"{h} vs {a} (unknown team)")
+                continue
+            slot = pair_map.get(frozenset((ch, ca)))
+            if not slot:
+                skipped.append(f"{ch} vs {ca} (no fixture)")
+                continue
+            mid, fhome, faway, grp = slot
+            ihg, iag = int(hg), int(ag)
+            # Orient the score to the fixture's home/away.
+            if fhome == ch:
+                phg, pag = ihg, iag
+            else:
+                phg, pag = iag, ihg
+            db.upsert_official_result(mid, f"Group {grp}", fhome, faway, phg, pag, locked=True)
+            applied += 1
+
+    print(f"Seeded {applied} official group results from {path.name}.")
+    for s in skipped:
+        print(f"  skipped: {s}")
+    if not skipped:
+        print("Restart the app (or it picks up on next change) to apply.")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Live DB maintenance for the WC2026 predictor.")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -142,8 +214,10 @@ def main() -> None:
     sv = sub.add_parser("scale-votes", help="downsample votes to N, preserving the ratio")
     sv.add_argument("target", type=int)
     sub.add_parser("reset-shares", help="clear names + referral links (reset sharing)")
-    ss = sub.add_parser("seed-standings", help="load group standings from a CSV")
+    ss = sub.add_parser("seed-standings", help="load group standings overrides from a CSV")
     ss.add_argument("csv", nargs="?", default=None)
+    sr = sub.add_parser("seed-results", help="apply real group match results from a CSV")
+    sr.add_argument("csv", nargs="?", default=None)
     args = ap.parse_args()
 
     if args.cmd == "stats":
@@ -154,6 +228,8 @@ def main() -> None:
         reset_shares()
     elif args.cmd == "seed-standings":
         seed_standings(args.csv)
+    elif args.cmd == "seed-results":
+        seed_results(args.csv)
 
 
 if __name__ == "__main__":
