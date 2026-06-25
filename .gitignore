@@ -61,4 +61,3 @@ env/
 
 # Backend runtime artefacts (regenerated on first run / build)
 backend/model_cache/
-backend/wc26.db
