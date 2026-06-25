@@ -13,7 +13,7 @@ interface Ctx {
   refresh: () => Promise<void>;
   submit: (
     team1: string,
-    team2: string,
+    team2?: string,
     champion?: string,
     name?: string,
     referrer_vote_id?: number,
@@ -43,7 +43,7 @@ export function VotesProvider({
   const submit = useCallback(
     async (
       team1: string,
-      team2: string,
+      team2?: string,
       champion?: string,
       name?: string,
       referrer_vote_id?: number,

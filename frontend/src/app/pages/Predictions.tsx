@@ -5,7 +5,6 @@ import { getMLBracket } from "../lib/PicksContext";
 import { GROUP_LETTERS } from "../lib/data";
 import type { KnockoutResult } from "../lib/PicksContext";
 import { TeamBadge } from "../components/TeamBadge";
-import { AdSlot } from "../components/AdSlot";
 import { MatchDetailDialog, type MatchRef } from "../components/MatchDetailDialog";
 import { useSEO } from "../lib/useSEO";
 
@@ -78,14 +77,9 @@ export default function Predictions() {
       <section className="mb-10">
         <h2 className="display tracking-wide mb-4">GROUP STAGE</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {GROUP_LETTERS.map((g, i) => (
+          {GROUP_LETTERS.map((g) => (
             <div key={g}>
               <GroupCard letter={g} ml={ml} onOpenMatch={setSelected} />
-              {i === 5 && (
-                <div className="md:col-span-2 lg:col-span-3">
-                  <AdSlot variant="leaderboard" />
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -95,7 +89,6 @@ export default function Predictions() {
       <section>
         <h2 className="display tracking-wide mb-4">KNOCKOUTS</h2>
         <KnockoutColumn title="Round of 32" matches={ml.r32} onOpenMatch={setSelected} />
-        <AdSlot variant="in-article" />
         <KnockoutColumn title="Round of 16" matches={ml.r16} onOpenMatch={setSelected} />
         <KnockoutColumn title="Quarter-finals" matches={ml.qf} onOpenMatch={setSelected} />
         <KnockoutColumn title="Semi-finals" matches={ml.sf} onOpenMatch={setSelected} />

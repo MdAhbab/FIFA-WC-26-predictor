@@ -4,8 +4,8 @@ import {
   downloadBlob,
   generateStoryImage,
   shareStoryImage,
-  shareToFacebook,
   shareToInstagram,
+  shareToMessenger,
   shareToWhatsApp,
   shareToX,
   shortRefUrl,
@@ -22,8 +22,8 @@ interface Props {
 /**
  * Post-game share card. Builds a themed 1080x1920 "champion" story image (crown + flag + reached Elo
  * + player name + QR/short link) and offers story sharing: the native share sheet on mobile (best for
- * Instagram/Facebook stories with the image), plus per-platform actions for Instagram, Facebook and
- * WhatsApp that open the app on mobile / the web story link on desktop.
+ * Instagram stories with the image), plus per-platform actions for Instagram, Messenger, WhatsApp and
+ * X that open the app on mobile / the web link on desktop.
  */
 export function ShareStory({ userName, championName, championIso, championElo, voteId }: Props) {
   const [img, setImg] = useState<{ blob: Blob; dataUrl: string } | null>(null);
@@ -106,10 +106,10 @@ export function ShareStory({ userName, championName, championIso, championElo, v
             </button>
             <button
               type="button"
-              onClick={() => shareToFacebook(shortUrl)}
+              onClick={() => shareToMessenger(shortUrl)}
               className="inline-flex items-center justify-center rounded-md border-2 border-foreground/20 px-2 py-2.5 text-xs display uppercase tracking-wider hover:bg-muted transition-colors"
             >
-              Facebook
+              Messenger
             </button>
             <button
               type="button"

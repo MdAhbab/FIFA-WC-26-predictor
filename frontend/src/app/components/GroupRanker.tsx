@@ -1,7 +1,7 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Lock } from "lucide-react";
 import { motion } from "motion/react";
 import { usePicks } from "../lib/PicksContext";
-import { teamByName } from "../lib/data";
+import { isGroupLocked } from "../lib/data";
 
 interface Props {
   group: string;
@@ -15,8 +15,11 @@ const POS_LABEL: Record<number, { label: string; color: string }> = {
 };
 
 export function GroupRanker({ group }: Props) {
-  const { state, swapGroup, bracket } = usePicks();
-  const order = state.groupOrder[group] ?? [];
+  const { swapGroup, bracket } = usePicks();
+  // Render straight from the effective standings: when the group is locked these are the real
+  // finishing order (with real points); when it's live they mirror the player's current ranking.
+  const standings = bracket.effectiveStandings[group] ?? [];
+  const locked = isGroupLocked(group);
 
   return (
     <div className="rounded-[14px] border-2 border-foreground/15 bg-card overflow-hidden">
@@ -38,21 +41,29 @@ export function GroupRanker({ group }: Props) {
             Group {group}
           </span>
         </div>
-        <span className="text-[10px] mono uppercase tracking-wider text-muted-foreground">
-          Reorder
-        </span>
+        {locked ? (
+          <span
+            className="inline-flex items-center gap-1 text-[10px] display tracking-wider px-1.5 py-0.5 rounded border"
+            style={{ color: "var(--stamp-red)", borderColor: "var(--stamp-red)" }}
+          >
+            <Lock className="size-3" /> FINAL
+          </span>
+        ) : (
+          <span className="text-[10px] mono uppercase tracking-wider text-muted-foreground">
+            Reorder
+          </span>
+        )}
       </div>
 
       <ul className="px-3 pb-3 space-y-1.5">
-        {order.map((teamName, idx) => {
-          const team = teamByName(teamName);
-          if (!team) return null;
+        {standings.map((s, idx) => {
+          const team = s.team;
           const posInfo = POS_LABEL[idx];
-          const isBestThird = idx === 2 && bracket.bestThirds.has(teamName);
+          const isBestThird = idx === 2 && bracket.bestThirds.has(team.name);
           return (
             <motion.li
               layout
-              key={teamName}
+              key={team.name}
               className="flex items-center gap-2 rounded-md border border-foreground/10 bg-background/60 pl-2 pr-1 py-1.5"
             >
               <span
@@ -82,29 +93,40 @@ export function GroupRanker({ group }: Props) {
                   {isBestThird ? "ADV" : "POOL"}
                 </span>
               )}
-              <span className="text-[10px] mono text-muted-foreground w-10 text-right">
-                {team.elo}
-              </span>
-              <div className="flex flex-col">
-                <button
-                  type="button"
-                  aria-label="Move up"
-                  disabled={idx === 0}
-                  onClick={() => swapGroup(group, idx, idx - 1)}
-                  className="size-5 inline-flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
-                >
-                  <ChevronUp className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Move down"
-                  disabled={idx === 3}
-                  onClick={() => swapGroup(group, idx, idx + 1)}
-                  className="size-5 inline-flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
-                >
-                  <ChevronDown className="size-3.5" />
-                </button>
-              </div>
+              {/* Real points once the group has started; Elo otherwise. */}
+              {locked || s.played > 0 ? (
+                <span className="text-[10px] mono tabular-nums text-muted-foreground w-16 text-right">
+                  {s.pts}p · {s.gf}-{s.ga}
+                </span>
+              ) : (
+                <span className="text-[10px] mono text-muted-foreground w-10 text-right">
+                  {team.elo}
+                </span>
+              )}
+              {locked ? (
+                <div className="w-5" />
+              ) : (
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    aria-label="Move up"
+                    disabled={idx === 0}
+                    onClick={() => swapGroup(group, idx, idx - 1)}
+                    className="size-5 inline-flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
+                  >
+                    <ChevronUp className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Move down"
+                    disabled={idx === 3}
+                    onClick={() => swapGroup(group, idx, idx + 1)}
+                    className="size-5 inline-flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"
+                  >
+                    <ChevronDown className="size-3.5" />
+                  </button>
+                </div>
+              )}
             </motion.li>
           );
         })}
@@ -114,9 +136,15 @@ export function GroupRanker({ group }: Props) {
           className="text-[9px] display tracking-[0.2em] flex items-center justify-between"
           style={{ color: "var(--muted-foreground)" }}
         >
-          <span>1–2 ADVANCE</span>
-          <span>3RD: BEST-8 POOL</span>
-          <span>4TH OUT</span>
+          {locked ? (
+            <span>FINAL RESULT · LOCKED</span>
+          ) : (
+            <>
+              <span>1–2 ADVANCE</span>
+              <span>3RD: BEST-8 POOL</span>
+              <span>4TH OUT</span>
+            </>
+          )}
         </div>
       </div>
     </div>

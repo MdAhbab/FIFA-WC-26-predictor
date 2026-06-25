@@ -1,5 +1,4 @@
 import { useSEO } from "../lib/useSEO";
-import { AdSlot } from "../components/AdSlot";
 
 export default function Methodology() {
   useSEO({
@@ -138,8 +137,6 @@ export default function Methodology() {
             expensive model retrain.
           </p>
         </Section>
-
-        <AdSlot variant="in-article" />
 
         <Section title="Where your picks come in">
           <p>

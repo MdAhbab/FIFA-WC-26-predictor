@@ -55,7 +55,6 @@ import db
 import engine as E
 import news
 import sessions
-import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 DIST = HERE.parent / "frontend" / "dist"
@@ -165,6 +164,22 @@ def _load_results():
             'winner_team': r.get('winner_team')
         }
     _rebuild_state_from_results()
+
+
+# Admin-set group standings overrides: {group letter -> [rows ordered 1st..4th]}. They override both
+# the displayed table and the knockout seeding (see engine.deterministic_standings / resolve / MC).
+_STANDINGS: dict[str, list[dict]] = {}
+
+
+def _load_standings():
+    """Reload the admin standings overrides and invalidate the payload cache (they change the table,
+    the bracket seeding and the Monte-Carlo title race)."""
+    global _GEN
+    _STANDINGS.clear()
+    _STANDINGS.update(db.list_group_standings())
+    with _STATE_LOCK:
+        _GEN += 1
+    _CACHE.clear()
 
 
 # Admin-editable match dates (app display only — no effect on Elo/predictions, so no cache bump).
@@ -301,6 +316,10 @@ def _group_forecasts(gp, eff, lam):
                     "losses": 0, "gf": 0, "ga": 0, "gd": 0, "pts": 0} for t in gteams}
         matches = []
         sub = gp[gp.group == g]
+        # Decide up front whether this group has started (any official result) so predicted fixtures
+        # are excluded from the standings count once real games exist.
+        has_official = any(int(r.match_id) in _RESULTS for r in sub.itertuples(index=False))
+        all_official = True
         for r in sub.itertuples(index=False):
             mid = int(r.match_id)
             official = _RESULTS.get(mid)
@@ -308,11 +327,11 @@ def _group_forecasts(gp, eff, lam):
                 hg, ag = int(official['hg']), int(official['ag'])
                 winner = 'home' if hg > ag else 'away' if ag > hg else 'draw'
             else:
+                all_official = False
                 hg, ag = int(r.predicted_home_goals), int(r.predicted_away_goals)
                 # App display is COHERENT (unlike the EV-optimal competition submission, where the
                 # argmax winning_team is scored independently of the scoreline): derive the shown
-                # winner from the predicted score so a 1-1 reads "Draw" and matches the standings
-                # table below, which already awards both teams a point for a level score.
+                # winner from the predicted score so a 1-1 reads "Draw" and matches the standings.
                 winner = 'home' if hg > ag else 'away' if ag > hg else 'draw'
             matches.append({
                 "matchId": f"G{mid}", "home": raw_team(r.home_team, eff),
@@ -321,17 +340,44 @@ def _group_forecasts(gp, eff, lam):
                 "yellows": int(r.yellow_cards), "reds": int(r.red_cards),
                 "date": str(r.date_utc)[:10], "venue": str(r.venue),
                 "official": bool(official), "locked": bool(official and official['locked'])})
-            H, A = rows[r.home_team], rows[r.away_team]
-            H["played"] += 1; A["played"] += 1
-            H["gf"] += hg; H["ga"] += ag; A["gf"] += ag; A["ga"] += hg
-            if hg > ag: H["wins"] += 1; A["losses"] += 1; H["pts"] += 3
-            elif ag > hg: A["wins"] += 1; H["losses"] += 1; A["pts"] += 3
-            else: H["draws"] += 1; A["draws"] += 1; H["pts"] += 1; A["pts"] += 1
+            # Standings count only PLAYED (official) games once a group has started, so the table
+            # mirrors reality (MP = games played) instead of inflating it with predicted scorelines.
+            # A group with no official result yet stays a full projection (the model's forecast).
+            if official or not has_official:
+                H, A = rows[r.home_team], rows[r.away_team]
+                H["played"] += 1; A["played"] += 1
+                H["gf"] += hg; H["ga"] += ag; A["gf"] += ag; A["ga"] += hg
+                if hg > ag: H["wins"] += 1; A["losses"] += 1; H["pts"] += 3
+                elif ag > hg: A["wins"] += 1; H["losses"] += 1; A["pts"] += 3
+                else: H["draws"] += 1; A["draws"] += 1; H["pts"] += 1; A["pts"] += 1
         for row in rows.values():
             row["gd"] = row["gf"] - row["ga"]
-        order = E.deterministic_standings(gteams, ENG['group_df'], eff, ENG['state'], ENG['model'], lam)
-        standings = [rows[t] for t in order]
-        groups_out[g] = {"group": g, "standings": standings, "matches": matches}
+
+        override = _STANDINGS.get(g)
+        if override and {r['team'] for r in override} == set(gteams):
+            # Admin-set standings are authoritative for both the table and the seeding order.
+            by_team = {r['team']: r for r in override}
+            standings = [{"team": raw_team(t, eff), "played": int(by_team[t].get('played', 0)),
+                          "wins": int(by_team[t].get('wins', 0)), "draws": int(by_team[t].get('draws', 0)),
+                          "losses": int(by_team[t].get('losses', 0)), "gf": int(by_team[t].get('gf', 0)),
+                          "ga": int(by_team[t].get('ga', 0)), "gd": int(by_team[t].get('gd', 0)),
+                          "pts": int(by_team[t].get('pts', 0))}
+                         for t in [r['team'] for r in override]]
+            locked = True
+        else:
+            det = E.deterministic_standings(gteams, ENG['group_df'], eff, ENG['state'], ENG['model'], lam,
+                                            official_results=_RESULTS)
+            det_idx = {t: i for i, t in enumerate(det)}
+            if has_official:
+                # Real standings so far: rank by points, then GD, GF, with the model order as tiebreak.
+                order = sorted(gteams, key=lambda t: (rows[t]["pts"], rows[t]["gd"],
+                                                      rows[t]["gf"], -det_idx[t]), reverse=True)
+            else:
+                order = det                    # pure forecast → keep the model's expected-points order
+            standings = [rows[t] for t in order]
+            locked = all_official
+
+        groups_out[g] = {"group": g, "standings": standings, "matches": matches, "locked": bool(locked)}
     return groups_out
 
 
@@ -339,24 +385,16 @@ def build_payload(config: dict | None = None, n_sims: int = MC_BASE_SIMS):
     config = config or {}
     eff = {t: ENG['effective_elo'](t, config) for t in ENG['teams']}
     lam = E.build_lambda_matrix(ENG['teams'], eff, ENG['state'], ENG['model'])
-    gp, kp, bv = ENG['resolve'](config, official_results=_RESULTS)
+    gp, kp, bv = ENG['resolve'](config, official_results=_RESULTS, standings_override=_STANDINGS)
     teams = sorted((raw_team(t, eff) for t in ENG['teams']), key=lambda d: -d["elo"])
-    
-    mp = HERE / 'datasets' / 'market_probabilities.csv'
-    if mp.exists():
-        m = pd.read_csv(mp).sort_values('champion_probability', ascending=False)
-        cp = []
-        for _, r in m.head(32).iterrows():
-            cp.append({
-                'team': r['team'],
-                'champion': float(r['champion_probability']),
-                'final': float(r.get('final_probability', 0)),
-                'semi': float(r.get('semi_final_probability', 0)),
-                'quarter': float(r.get('quarter_final_probability', 0)),
-                'r16': float(r.get('round_of_16_probability', 0))
-            })
-    else:
-        cp = E.champion_probabilities(lam, ENG['groups'], ENG['knock_df'], n_sims=n_sims, official_results=_RESULTS, group_df=ENG['group_df'])
+
+    # Title race comes from the LIVE Monte-Carlo, which factors in every official result and admin
+    # standings override — so the homepage favourites board shifts each time scores are updated. It is
+    # cheap in practice: the base payload is cached and only rebuilt when results/standings change
+    # (see _GEN / _CACHE), so steady-state traffic never pays for the simulation.
+    cp = E.champion_probabilities(lam, ENG['groups'], ENG['knock_df'], n_sims=n_sims,
+                                  official_results=_RESULTS, group_df=ENG['group_df'],
+                                  standings_override=_STANDINGS)
 
     title_race = [{"team": d["team"], "iso": iso(d["team"]), "prob": d["champion"],
                    "final": d["final"], "semi": d["semi"], "quarter": d["quarter"], "r16": d["r16"]}
@@ -420,11 +458,27 @@ class StrengthReq(BaseModel):
 
 class VoteReq(BaseModel):
     team1: str
-    team2: str
+    team2: str | None = None        # optional second champion pick (homepage gives two)
     champion: str | None = None
     name: str | None = None
     referrer_vote_id: int | None = None
     payload: dict | None = None
+
+
+class StandingRow(BaseModel):
+    team: str
+    played: int = 0
+    wins: int = 0
+    draws: int = 0
+    losses: int = 0
+    gf: int = 0
+    ga: int = 0
+    pts: int = 0
+
+
+class StandingsReq(BaseModel):
+    group: str
+    rows: list[StandingRow]         # all 4 teams, ordered 1st → 4th
 
 
 class ResultReq(BaseModel):
@@ -454,6 +508,7 @@ def _attach_session(request: Request, response: Response) -> str:
 def _startup():
     _load_results()                 # replay any saved official results onto team state
     _load_schedule()                # load admin-edited match dates
+    _load_standings()               # load admin group-standings overrides
     get_payload({}, MC_BASE_SIMS)   # warm the base payload exactly once
 
 
@@ -472,6 +527,7 @@ def bootstrap(request: Request, response: Response):
     p["votes"] = db.vote_summary(VALID_TEAMS)
     p["results"] = list(_RESULTS.values())
     p["schedule"] = _schedule_list()
+    p["standings"] = _STANDINGS
     p["session"] = sessions.info(sid)
     return p
 
@@ -553,7 +609,8 @@ def get_news(n: int = 8):
 
 @app.get("/api/results")
 def results():
-    return {"results": list(_RESULTS.values()), "schedule": _schedule_list(), "count": len(_RESULTS)}
+    return {"results": list(_RESULTS.values()), "schedule": _schedule_list(),
+            "standings": _STANDINGS, "count": len(_RESULTS)}
 
 
 def normalize_team_name(name: str | None) -> str | None:
@@ -568,13 +625,18 @@ def normalize_team_name(name: str | None) -> str | None:
 
 @app.post("/api/vote")
 def vote(req: VoteReq, request: Request):
+    # A vote is one or two CHAMPION picks. team1 is required; team2 (the homepage's second champion)
+    # is optional, so a single-champion vote — e.g. the one auto-cast from a finished Play bracket — is
+    # accepted too.
     t1 = normalize_team_name(req.team1)
-    t2 = normalize_team_name(req.team2)
-    if not t1 or not t2:
-        raise HTTPException(400, "Both teams must be valid participating World Cup teams.")
-    if t1 == t2:
+    if not t1:
+        raise HTTPException(400, "Pick a valid participating World Cup team.")
+    t2 = normalize_team_name(req.team2) if req.team2 else None
+    if req.team2 and not t2:
+        raise HTTPException(400, "Your second pick must be a valid participating World Cup team.")
+    if t2 and t1 == t2:
         raise HTTPException(400, "Pick two different teams.")
-    
+
     ip = _client_ip(request)
 
     voted, rem_secs = db.has_voted_recently(ip)
@@ -586,10 +648,11 @@ def vote(req: VoteReq, request: Request):
             detail=f"You have already voted in the last 12 hours from this IP. Next vote available in {h}h {m}m."
         )
 
-    ch = normalize_team_name(req.champion) if req.champion else None
+    # The primary champion pick (team1) is the headline champion unless one is given explicitly.
+    ch = normalize_team_name(req.champion) if req.champion else t1
     # Resolve a collision-free name and insert atomically (no two concurrent voters get the same name).
     vote_id, resolved_name = db.add_vote_unique(
-        t1, t2, ch, req.payload, requested_name=req.name, ip_address=ip,
+        t1, t2 or "", ch, req.payload, requested_name=req.name, ip_address=ip,
         referrer_vote_id=req.referrer_vote_id)
 
     return {
@@ -708,14 +771,54 @@ def admin_delete_schedule(match_id: int, x_admin_token: str = Header(default="")
     return {"ok": True, "schedule": _schedule_list()}
 
 
+@app.post("/api/admin/standings")
+def admin_standings(req: StandingsReq, x_admin_token: str = Header(default="")):
+    """Set a group's standings directly (positions + MP/W/D/L/GF/GA/Pts). This is authoritative: it
+    fixes the displayed table AND the knockout (R32) seeding, then re-runs the ML title race."""
+    _require_admin(x_admin_token)
+    g = (req.group or "").strip().upper()
+    if g not in ENG['groups']:
+        raise HTTPException(400, f"Unknown group: {g!r}")
+    gteams = set(ENG['groups'][g])
+    rows, seen = [], set()
+    for r in req.rows:
+        t = normalize_team_name(r.team)
+        if not t or t not in gteams:
+            raise HTTPException(400, f"{r.team!r} is not in group {g}.")
+        if t in seen:
+            raise HTTPException(400, f"Duplicate team {t!r} in standings.")
+        seen.add(t)
+        rows.append({"team": t, "played": max(0, r.played), "wins": max(0, r.wins),
+                     "draws": max(0, r.draws), "losses": max(0, r.losses),
+                     "gf": max(0, r.gf), "ga": max(0, r.ga), "pts": max(0, r.pts)})
+    if len(rows) != len(gteams):
+        raise HTTPException(400, f"Group {g} needs all {len(gteams)} teams in finishing order.")
+    db.upsert_group_standings(g, rows)
+    _load_standings()
+    get_payload({}, MC_BASE_SIMS)   # re-warm with the new seeding + title race baked in
+    _bump_seo()
+    return {"ok": True, "standings": _STANDINGS, "generation": _GEN}
+
+
+@app.delete("/api/admin/standings/{group}")
+def admin_delete_standings(group: str, x_admin_token: str = Header(default="")):
+    _require_admin(x_admin_token)
+    db.delete_group_standings((group or "").strip().upper())
+    _load_standings()
+    get_payload({}, MC_BASE_SIMS)
+    _bump_seo()
+    return {"ok": True, "standings": _STANDINGS, "generation": _GEN}
+
+
 @app.post("/api/admin/vote_inject")
 def admin_inject_vote(req: VoteReq, count: int = 1, x_admin_token: str = Header(default="")):
+    """Inject N champion votes for a single team (admin gives exactly one champion)."""
     _require_admin(x_admin_token)
-    t1 = normalize_team_name(req.team1) or ""
-    t2 = normalize_team_name(req.team2) or ""
-    ch = normalize_team_name(req.champion) if req.champion else None
-    for _ in range(count):
-        db.add_vote(t1, t2, ch, req.payload)
+    ch = normalize_team_name(req.champion) or normalize_team_name(req.team1 or "")
+    if not ch:
+        raise HTTPException(400, "Provide a valid champion team to inject.")
+    for _ in range(max(1, int(count))):
+        db.add_vote(ch, "", ch, {"champion": ch, "top4": [ch], "source": "admin"})
     return db.vote_summary(VALID_TEAMS)
 
 

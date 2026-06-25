@@ -116,6 +116,12 @@ export function getAllGroupForecasts(): Record<string, GroupForecast> {
   return GROUP_FORECASTS;
 }
 
+/** A group is locked once it's decided (all matches official, or an admin set its standings). Players
+ *  can no longer reorder it and the bracket uses the real finishing order. */
+export function isGroupLocked(g: string): boolean {
+  return !!GROUP_FORECASTS[g]?.locked;
+}
+
 // ---------- Real ML match prediction (pairwise lookup) ----------
 export interface RawMatchResult {
   homeGoals: number;

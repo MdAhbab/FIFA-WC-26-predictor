@@ -68,7 +68,26 @@ def init_db():
                 ts TEXT NOT NULL
             )"""
         )
-        
+        # Admin-set group standings override. One row per (group, team); `position` (1-4) is the
+        # authoritative finishing order that drives both the displayed table AND the knockout seeding
+        # — so the admin can fix a table the model gets wrong / lock a group's real final standings.
+        c.execute(
+            """CREATE TABLE IF NOT EXISTS group_standings (
+                grp TEXT NOT NULL,
+                team TEXT NOT NULL,
+                played INTEGER NOT NULL DEFAULT 0,
+                wins INTEGER NOT NULL DEFAULT 0,
+                draws INTEGER NOT NULL DEFAULT 0,
+                losses INTEGER NOT NULL DEFAULT 0,
+                gf INTEGER NOT NULL DEFAULT 0,
+                ga INTEGER NOT NULL DEFAULT 0,
+                pts INTEGER NOT NULL DEFAULT 0,
+                position INTEGER NOT NULL,
+                ts TEXT NOT NULL,
+                PRIMARY KEY (grp, team)
+            )"""
+        )
+
         # Migrations: Add new columns if they do not exist
         try:
             c.execute("ALTER TABLE votes ADD COLUMN name TEXT")
@@ -164,12 +183,55 @@ def delete_schedule(match_id) -> int:
         return cur.rowcount
 
 
-def add_vote(team1: str, team2: str, champion: str | None = None, payload: dict | None = None, name: str | None = None, ip_address: str | None = None, referrer_vote_id: int | None = None) -> int:
+# ---------------------------------------------------------------------------
+# Group standings override (admin-set positions / points)
+# ---------------------------------------------------------------------------
+def upsert_group_standings(grp: str, rows: list[dict]) -> None:
+    """Replace the whole standings override for one group. `rows` is the 4 teams already in finishing
+    order (index 0 = 1st); position is derived from the order. Pass [] to clear the group."""
+    ts = datetime.now(timezone.utc).isoformat()
+    with _LOCK, _conn() as c:
+        c.execute("DELETE FROM group_standings WHERE grp=?", (grp,))
+        for i, r in enumerate(rows):
+            gf = int(r.get("gf", 0)); ga = int(r.get("ga", 0))
+            c.execute(
+                """INSERT INTO group_standings
+                     (grp, team, played, wins, draws, losses, gf, ga, pts, position, ts)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (grp, str(r["team"]), int(r.get("played", 0)), int(r.get("wins", 0)),
+                 int(r.get("draws", 0)), int(r.get("losses", 0)), gf, ga,
+                 int(r.get("pts", 0)), i + 1, ts),
+            )
+
+
+def list_group_standings() -> dict[str, list[dict]]:
+    """All admin standings overrides as {group: [rows ordered by position]} with gd derived."""
+    with _LOCK, _conn() as c:
+        rows = c.execute(
+            "SELECT grp, team, played, wins, draws, losses, gf, ga, pts, position "
+            "FROM group_standings ORDER BY grp, position"
+        ).fetchall()
+    out: dict[str, list[dict]] = {}
+    for r in rows:
+        d = dict(r)
+        d["gd"] = d["gf"] - d["ga"]
+        out.setdefault(d["grp"], []).append(d)
+    return out
+
+
+def delete_group_standings(grp: str) -> int:
+    with _LOCK, _conn() as c:
+        cur = c.execute("DELETE FROM group_standings WHERE grp=?", (grp,))
+        return cur.rowcount
+
+
+def add_vote(team1: str, team2: str = "", champion: str | None = None, payload: dict | None = None, name: str | None = None, ip_address: str | None = None, referrer_vote_id: int | None = None) -> int:
+    # team2 is optional (a single-champion vote stores "" — the NOT NULL column needs a value).
     ts = datetime.now(timezone.utc).isoformat()
     with _LOCK, _conn() as c:
         cur = c.execute(
             "INSERT INTO votes (ts, team1, team2, champion, payload, name, ip_address, referrer_vote_id) VALUES (?,?,?,?,?,?,?,?)",
-            (ts, team1, team2, champion, json.dumps(payload) if payload else None, name, ip_address, referrer_vote_id),
+            (ts, team1, team2 or "", champion, json.dumps(payload) if payload else None, name, ip_address, referrer_vote_id),
         )
         return cur.lastrowid
 
@@ -191,7 +253,7 @@ def _resolve_unique_name(c, requested_name: str | None) -> str:
     return f"{requested}{i}"
 
 
-def add_vote_unique(team1: str, team2: str, champion: str | None = None, payload: dict | None = None,
+def add_vote_unique(team1: str, team2: str = "", champion: str | None = None, payload: dict | None = None,
                     requested_name: str | None = None, ip_address: str | None = None,
                     referrer_vote_id: int | None = None) -> tuple[int, str]:
     """Resolve a collision-free name and insert the vote ATOMICALLY under a single lock, so two
@@ -201,27 +263,31 @@ def add_vote_unique(team1: str, team2: str, champion: str | None = None, payload
         name = _resolve_unique_name(c, requested_name)
         cur = c.execute(
             "INSERT INTO votes (ts, team1, team2, champion, payload, name, ip_address, referrer_vote_id) VALUES (?,?,?,?,?,?,?,?)",
-            (ts, team1, team2, champion, json.dumps(payload) if payload else None, name, ip_address, referrer_vote_id),
+            (ts, team1, team2 or "", champion, json.dumps(payload) if payload else None, name, ip_address, referrer_vote_id),
         )
         return cur.lastrowid, name
 
 
 def vote_summary(valid_teams: set[str] | None = None, top_n: int = 12) -> dict:
-    """Aggregate each team's appearances across both vote slots."""
+    """Aggregate champion support across every pick. Each vote contributes its champion picks
+    (team1 always; team2 too when a homepage voter named a second champion). The board percentage is
+    over the total number of champion picks cast (not votes*2), so 1- and 2-pick votes mix correctly."""
     with _LOCK, _conn() as c:
         rows = c.execute("SELECT team1, team2, champion FROM votes").fetchall()
     total = len(rows)
     counts: dict[str, int] = {}
     champ_counts: dict[str, int] = {}
+    picks = 0
     for r in rows:
         for t in (r["team1"], r["team2"]):
             if t and (valid_teams is None or t in valid_teams):
                 counts[t] = counts.get(t, 0) + 1
+                picks += 1
         ch = r["champion"]
         if ch and (valid_teams is None or ch in valid_teams):
             champ_counts[ch] = champ_counts.get(ch, 0) + 1
     ranked = sorted(counts.items(), key=lambda kv: -kv[1])[:top_n]
-    denom = total * 2 if total else 1
+    denom = picks if picks else 1
     top = [{"team": t, "count": n, "pct": round(100 * n / denom, 1)} for t, n in ranked]
     return {
         "total": total,
@@ -305,45 +371,57 @@ def make_unique_name(requested_name: str) -> str:
         i += 1
 
 
+def _top4_of(row: dict) -> list[str]:
+    """A voter's top-4 picks. Play votes store an explicit `top4` (their bracket's final four) in the
+    payload; homepage/champion votes fall back to their named champion pick(s)."""
+    try:
+        p = json.loads(row.get("payload") or "{}")
+        t4 = p.get("top4")
+        if isinstance(t4, list) and t4:
+            return [str(x) for x in t4 if x][:4]
+    except Exception:
+        pass
+    return [t for t in (row.get("team1"), row.get("team2")) if t]
+
+
+def _decorate(row: dict) -> dict:
+    """Attach `top4` + a clean `champion` to a vote row and drop the raw payload from the response."""
+    d = dict(row)
+    d["top4"] = _top4_of(d)
+    d.pop("payload", None)
+    return d
+
+
 def get_shared_vote_details(vote_id: int) -> dict | None:
-    """Fetch referrer vote details, referred friends' votes, and the parent vote who referred the host."""
+    """Fetch referrer vote details, referred friends' votes, and the parent vote who referred the host.
+    Every returned voter carries their `top4` picks so the comparison can show full top lists, not
+    just the champion. `match_count` = overlap of top-4 picks with the host (referrer)."""
+    cols = "id, name, team1, team2, champion, payload, ts, referrer_vote_id"
     with _LOCK, _conn() as c:
-        ref_row = c.execute(
-            "SELECT id, name, team1, team2, champion, ts, referrer_vote_id FROM votes WHERE id = ?",
-            (int(vote_id),)
-        ).fetchone()
+        ref_row = c.execute(f"SELECT {cols} FROM votes WHERE id = ?", (int(vote_id),)).fetchone()
         if not ref_row:
             return None
-        
         friend_rows = c.execute(
-            "SELECT id, name, team1, team2, champion, ts, referrer_vote_id FROM votes WHERE referrer_vote_id = ? ORDER BY ts ASC",
-            (int(vote_id),)
+            f"SELECT {cols} FROM votes WHERE referrer_vote_id = ? ORDER BY ts ASC", (int(vote_id),)
         ).fetchall()
-        
-        parent = None
-        ref = dict(ref_row)
-        ref_finalists = {ref["team1"], ref["team2"]}
-        
-        if ref["referrer_vote_id"] is not None:
+        parent_row = None
+        if ref_row["referrer_vote_id"] is not None:
             parent_row = c.execute(
-                "SELECT id, name, team1, team2, champion, ts FROM votes WHERE id = ?",
-                (int(ref["referrer_vote_id"]),)
+                f"SELECT {cols} FROM votes WHERE id = ?", (int(ref_row["referrer_vote_id"]),)
             ).fetchone()
-            if parent_row:
-                parent = dict(parent_row)
-                parent_finalists = {parent["team1"], parent["team2"]}
-                parent["match_count"] = len(ref_finalists.intersection(parent_finalists))
-        
+
+    ref = _decorate(ref_row)
+    ref_top = set(ref["top4"])
+
+    parent = None
+    if parent_row:
+        parent = _decorate(parent_row)
+        parent["match_count"] = len(ref_top.intersection(parent["top4"]))
+
     friends = []
     for fr in friend_rows:
-        fd = dict(fr)
-        fr_finalists = {fd["team1"], fd["team2"]}
-        intersection = ref_finalists.intersection(fr_finalists)
-        fd["match_count"] = len(intersection)
+        fd = _decorate(fr)
+        fd["match_count"] = len(ref_top.intersection(fd["top4"]))
         friends.append(fd)
-        
-    return {
-        "referrer": ref,
-        "friends": friends,
-        "parent": parent
-    }
+
+    return {"referrer": ref, "friends": friends, "parent": parent}

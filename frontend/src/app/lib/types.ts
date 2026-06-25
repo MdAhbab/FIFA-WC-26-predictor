@@ -40,6 +40,27 @@ export interface GroupForecast {
   group: string;
   standings: GroupStanding[];
   matches: MatchPrediction[];
+  /** True once the group is decided — all its matches are official, or an admin set its standings.
+   *  When locked, the order is the real result and players can no longer reorder it. */
+  locked?: boolean;
+}
+
+/** A voter as returned by the shared-referral endpoint, including their full top-4 picks. */
+export interface SharedVoter {
+  id: number;
+  name: string;
+  team1: string;
+  team2: string;
+  champion: string;
+  top4: string[];
+  ts?: string;
+  match_count?: number;
+}
+
+export interface SharedVoteData {
+  referrer: SharedVoter;
+  friends: SharedVoter[];
+  parent: SharedVoter | null;
 }
 
 // ---------- Backend payload shapes ----------

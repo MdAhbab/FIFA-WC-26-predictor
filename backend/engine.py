@@ -479,8 +479,15 @@ def make_effective_elo(state, presets, pool=None):
 # ---------------------------------------------------------------------------
 # 6. Standings, best-thirds, slot resolution
 # ---------------------------------------------------------------------------
-def deterministic_standings(group_teams, group_df, eff, state, model, lam=None, official_results=None):
-    """Order a group's 4 teams by expected points (continuous, no ties)."""
+def deterministic_standings(group_teams, group_df, eff, state, model, lam=None, official_results=None,
+                            override_order=None):
+    """Order a group's 4 teams by expected points (continuous, no ties).
+
+    ``override_order`` (admin-set final standings for this group, as an ordered list of the 4 team
+    names) wins outright when supplied — it is the single source of truth for both the displayed
+    table and the knockout seeding, so an admin can correct a table the model gets wrong."""
+    if override_order and set(override_order) == set(group_teams):
+        return list(override_order)
     pts = {t: 0.0 for t in group_teams}; gdv = {t: 0.0 for t in group_teams}
     sub = group_df[group_df.home_team.isin(group_teams) & group_df.away_team.isin(group_teams)]
     for r in sub.itertuples(index=False):
@@ -521,8 +528,12 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
     third_slots = [(int(r.match_id), parse_third_groups(r.slot_away))
                    for r in knock_df.itertuples(index=False) if 'Best 3rd' in str(r.slot_away)]
 
-    def resolve(user_config=None, official_results=None):
+    def resolve(user_config=None, official_results=None, standings_override=None):
         cfg = user_config or {}
+        standings_override = standings_override or {}
+        # admin-set final order per group (list of team names) — beats both model and user picks
+        override_order = {g: [r['team'] for r in rows]
+                          for g, rows in standings_override.items() if rows}
         warns = []
         eff = {t: effective_elo(t, cfg) for t in ratings}
         lam = build_lambda_matrix(list(ratings), eff, state, model)   # one batched inference
@@ -566,17 +577,27 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
         # ---- standings ----
         winners, runners, thirds = {}, {}, {}
         for g, gteams in groups.items():
+            ovr = override_order.get(g)
             gc = cfg.get('groups', {}).get(g, {})
-            if gc.get('mode') == 'manual' and gc.get('order') and set(gc['order']) == set(gteams):
+            if ovr and set(ovr) == set(gteams):
+                order = ovr                      # admin override wins outright
+            elif gc.get('mode') == 'manual' and gc.get('order') and set(gc['order']) == set(gteams):
                 order = gc['order']
             else:
                 if gc.get('mode') == 'manual':
                     warns.append(f'Group {g}: invalid manual order → using model')
-                order = deterministic_standings(gteams, group_df, eff, state, model, lam, official_results=official_results)
+                order = deterministic_standings(gteams, group_df, eff, state, model, lam,
+                                                official_results=official_results,
+                                                override_order=ovr)
             winners[g], runners[g], thirds[g] = order[0], order[1], order[2]
 
-        # ---- best-8 thirds (rank by expected group points) ----
+        # ---- best-8 thirds (rank by expected group points; admin override pts win when set) ----
+        ovr_pts = {(g, r['team']): (r.get('pts', 0), r.get('gd', 0), r.get('gf', 0))
+                   for g, rows in standings_override.items() for r in rows}
         def third_scalar(team, g):
+            if (g, team) in ovr_pts:
+                p, gd, gf = ovr_pts[(g, team)]
+                return 100 + p + 0.1 * gd + 0.01 * gf   # decided groups rank above projected ones
             s = 0.0
             for opp in groups[g]:
                 if opp == team: continue
@@ -763,12 +784,24 @@ def _rslot_sim(slot, mid, winners, runners, third_assign, win_of, los_of):
     return s
 
 
-def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=None, official_results=None, group_mids=None):
+def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=None, official_results=None,
+                        group_mids=None, standings_override=None):
     """Play one full tournament. Group games sample Poisson(λ) scorelines (so goal difference is
     realistic for tie-breaks); knockout ties resolve from Dixon-Coles win/draw/loss probabilities,
-    with draws settled by a near coin-flip shootout (real shootouts are ~50/50). Returns win_of."""
+    with draws settled by a near coin-flip shootout (real shootouts are ~50/50). Returns win_of.
+
+    A group with an admin standings override is treated as already decided: its final order is fixed,
+    so the simulated knockouts (and hence champion odds) reflect the real table, not a re-draw."""
+    standings_override = standings_override or {}
     winners, runners, thirds, third_metric = {}, {}, {}, {}
     for g, gteams in groups.items():
+        ovr = standings_override.get(g)
+        if ovr and {r['team'] for r in ovr} == set(gteams):
+            order = [r['team'] for r in ovr]
+            winners[g], runners[g], thirds[g] = order[0], order[1], order[2]
+            r3 = next(r for r in ovr if r['team'] == order[2])
+            third_metric[g] = (r3.get('pts', 0), r3.get('gd', 0), r3.get('gf', 0), rng.random())
+            continue
         pts = {t: 0 for t in gteams}; gd = {t: 0 for t in gteams}; gf = {t: 0 for t in gteams}
         n = len(gteams)
         for i in range(n):
@@ -829,7 +862,8 @@ def simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows=N
 _R32, _R16, _QF, _SF, _FINAL = range(73, 89), range(89, 97), range(97, 101), (101, 102), 104
 
 
-def champion_probabilities(lam, groups, knock_df, n_sims=4000, seed=12345, official_results=None, group_df=None):
+def champion_probabilities(lam, groups, knock_df, n_sims=4000, seed=12345, official_results=None, group_df=None,
+                           standings_override=None):
     """Run the Monte-Carlo and aggregate per-team round-reach + title probabilities."""
     third_slots = _third_slots_of(knock_df)
     knock_rows = list(knock_df.itertuples(index=False))
@@ -847,7 +881,8 @@ def champion_probabilities(lam, groups, knock_df, n_sims=4000, seed=12345, offic
     champ = {t: 0 for t in teams}; final = {t: 0 for t in teams}
     semi = {t: 0 for t in teams}; qf = {t: 0 for t in teams}; r16 = {t: 0 for t in teams}
     for _ in range(n_sims):
-        win_of, _w, _r = simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows, official_results, group_mids)
+        win_of, _w, _r = simulate_tournament(lam, P, groups, knock_df, third_slots, rng, knock_rows,
+                                             official_results, group_mids, standings_override)
         for m in _R32:
             if m in win_of: r16[win_of[m]] += 1
         for m in _R16:

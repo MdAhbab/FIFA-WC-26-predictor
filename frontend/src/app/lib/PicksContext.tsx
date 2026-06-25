@@ -367,7 +367,11 @@ export function deriveBracket(state: PicksState): DerivedBracket {
   const effectiveStandings: Record<string, GroupStanding[]> = {};
 
   for (const g of GROUP_LETTERS) {
-    const order = state.groupOrder[g] ?? groups[g].standings.map((s) => s.team.name);
+    const serverOrder = groups[g].standings.map((s) => s.team.name);
+    // A decided group (all matches official, or an admin standings override) is LOCKED: its real
+    // finishing order is forced, so a stale user reorder can no longer change who plays whom in the
+    // Round of 32. Until then, the player's own ranking drives the bracket.
+    const order = groups[g].locked ? serverOrder : (state.groupOrder[g] ?? serverOrder);
     const lookup = new Map(
       groups[g].standings.map((s) => [s.team.name, s] as const),
     );

@@ -1,9 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
-import { Check, Trophy, Vote as VoteIcon, Copy } from "lucide-react";
+import { Trophy, Vote as VoteIcon } from "lucide-react";
 import { TEAMS } from "../lib/data";
 import { useVotes } from "../lib/VotesContext";
 import { ShareStory } from "./ShareStory";
-import { shortRefUrl } from "../lib/share";
+import { ReferralDashboard } from "./Referral";
+import { loadMyVote, saveMyVote } from "../lib/identity";
 
 const ISO_BY_NAME: Record<string, string> = {};
 
@@ -33,6 +34,12 @@ export function FanVote() {
         setRefId(parsedRef);
       }
     }
+    // Restore a previous vote so the referral hub survives refresh / the 12-hour vote lock.
+    const mine = loadMyVote();
+    if (mine) {
+      setMyVoteId(mine.voteId);
+      setMyUniqueName(mine.name);
+    }
   }, []);
 
   const canVote = t1 && t2 && t1 !== t2 && voterName.trim() && !busy;
@@ -52,10 +59,16 @@ export function FanVote() {
     setErr("");
     setBusy(true);
     try {
-      // Pick #1 (t1) is the champion, t1 and t2 are the finalists
-      const res = await submit(t1, t2, t1, voterName, refId || undefined);
+      // Both picks are champion picks; t1 is the headline champion. Both feed the people's board.
+      const res = await submit(t1, t2, t1, voterName, refId || undefined, {
+        champions: [t1, t2],
+        top4: [t1, t2],
+        champion: t1,
+        source: "home",
+      });
       setMyVoteId(res.vote_id);
       setMyUniqueName(res.name);
+      saveMyVote({ voteId: res.vote_id, name: res.name });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not submit your vote.");
     } finally {
@@ -74,7 +87,8 @@ export function FanVote() {
         <h2 className="display tracking-wide">FAN VOTE — WHO LIFTS THE CUP?</h2>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Pick the <strong>champion</strong> (lifts the cup) and your <strong>second opinion</strong> (finalist). See how your call stacks up.
+        Name your <strong>two champions</strong> — the teams you back to lift the cup. Both count on the
+        people's board. See how your call stacks up.
       </p>
 
       {!myVoteId ? (
@@ -95,8 +109,8 @@ export function FanVote() {
                 required
               />
             </div>
-            <TeamSelect label="Pick #1 (Champion)" value={t1} onChange={setT1} teams={teams} exclude={t2} />
-            <TeamSelect label="Pick #2 (Second Opinion)" value={t2} onChange={setT2} teams={teams} exclude={t1} />
+            <TeamSelect label="Champion Pick #1" value={t1} onChange={setT1} teams={teams} exclude={t2} />
+            <TeamSelect label="Champion Pick #2" value={t2} onChange={setT2} teams={teams} exclude={t1} />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
@@ -115,37 +129,15 @@ export function FanVote() {
           {err && <div className="text-xs mt-1" style={{ color: "var(--stamp-red)" }}>{err}</div>}
         </form>
       ) : (
-        <div className="rounded-lg border-2 border-foreground bg-background/50 p-4 text-center space-y-3 shadow-inner">
-          <h3 className="display text-base font-bold text-[var(--pitch)]">🎉 Finalists Registered!</h3>
-          <p className="text-sm">
-            You voted as <strong>{myUniqueName}</strong> (Champ: {t1}, Second Opinion: {t2}).
-          </p>
-          <div className="max-w-md mx-auto text-left">
-            <label className="display text-[9px] tracking-[0.2em] uppercase text-muted-foreground block mb-1">
-              Your Shareable Referral Link
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={shortRefUrl(myVoteId)}
-                className="flex-1 rounded-md border-2 border-foreground/20 bg-background px-3 py-2 text-xs focus:outline-none"
-                onClick={(e) => (e.target as HTMLInputElement).select()}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(shortRefUrl(myVoteId));
-                  alert("Link copied to clipboard!");
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md bg-foreground text-background display uppercase tracking-wider px-3 py-1.5 text-xs hover:bg-muted font-bold cursor-pointer"
-              >
-                <Copy className="size-3" />
-                Copy
-              </button>
-            </div>
+        <div className="space-y-4">
+          <div className="rounded-lg border-2 border-foreground bg-background/50 p-4 text-center shadow-inner">
+            <h3 className="display text-base font-bold text-[var(--pitch)]">🎉 Champions Registered!</h3>
+            <p className="text-sm mt-1">
+              You played as <strong>{myUniqueName}</strong>.
+            </p>
           </div>
-          {t1 && myVoteId && (
+          <ReferralDashboard voteId={myVoteId} myName={myUniqueName ?? "A fan"} />
+          {t1 && (
             <ShareStory
               userName={myUniqueName ?? "A fan"}
               championName={t1}
@@ -161,7 +153,7 @@ export function FanVote() {
       <div className="mt-6 pt-5 border-t border-foreground/10">
         <div className="flex items-baseline justify-between mb-2">
           <h3 className="display text-sm tracking-wide text-muted-foreground">
-            THE PEOPLE'S BRACKET
+            THE PEOPLE'S CHAMPIONS
           </h3>
           <span className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             {total} vote{total === 1 ? "" : "s"} cast

@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { useSEO } from "../lib/useSEO";
 import { getMLBracket, teamChampionProbabilities } from "../lib/PicksContext";
 import { TeamSticker } from "../components/TeamSticker";
-import { AdSlot } from "../components/AdSlot";
 import { FanVote } from "../components/FanVote";
 import { RecentNews } from "../components/RecentNews";
 
@@ -158,8 +157,6 @@ export default function Home() {
         ))}
       </section>
 
-      <AdSlot variant="leaderboard" />
-
       {/* Fan vote — pick 2 teams to win, see everyone's calls */}
       <section className="mt-4">
         <FanVote />
@@ -197,8 +194,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      <AdSlot variant="rectangle" />
 
       {/* Recent football news — vertically scrollable rail at the bottom of the page */}
       <RecentNews />

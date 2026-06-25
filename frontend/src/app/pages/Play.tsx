@@ -10,12 +10,10 @@ import { GroupRanker } from "../components/GroupRanker";
 import { MatchPicker } from "../components/MatchPicker";
 import { StageStepper } from "../components/StageStepper";
 import { TeamSticker } from "../components/TeamSticker";
-import { AdSlot } from "../components/AdSlot";
-import { StrengthPanel } from "../components/StrengthPanel";
 import { useVotes } from "../lib/VotesContext";
 import { ShareStory } from "../components/ShareStory";
-import { shortRefUrl } from "../lib/share";
-import { Check } from "lucide-react";
+import { ReferralDashboard, FriendsComparison } from "../components/Referral";
+import { loadMyVote, saveMyVote } from "../lib/identity";
 import { api } from "../lib/api";
 
 const NEXT_STAGE: Record<Stage, Stage> = {
@@ -55,6 +53,14 @@ export default function Play() {
           .catch(() => {});
       }
     }
+
+    // Restore a previous vote so the referral hub + results survive a browser refresh and the
+    // 12-hour vote lock (the user can always retrieve their referral id and who played under them).
+    const mine = loadMyVote();
+    if (mine) {
+      setMyVoteId(mine.voteId);
+      setMyUniqueName(mine.name);
+    }
   }, [state.stage, gotoStage]);
 
   const refreshShared = () => {
@@ -77,7 +83,7 @@ export default function Play() {
             </span>
           </div>
           <div className="text-[10px] mono uppercase text-background/70 font-bold">
-            Finalists: {sharedData.referrer.team1} vs {sharedData.referrer.team2}
+            Their champion: {sharedData.referrer.champion}
           </div>
         </div>
       )}
@@ -126,18 +132,12 @@ function GroupsStage() {
       <StageHeader
         eyebrow="Stage 1 of 5"
         title="Rank the 12 groups"
-        body="The ML has already ranked each pool. Reorder with the arrows when you disagree — top 2 advance; the 8 strongest 3rd-placers join them."
+        body="The ML has already ranked each pool. Reorder with the arrows when you disagree — top 2 advance; the 8 strongest 3rd-placers join them. Once a group's matches are all official, its order locks to the real result."
       />
-      <StrengthPanel />
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {GROUP_LETTERS.map((g, i) => (
+        {GROUP_LETTERS.map((g) => (
           <div key={g}>
             <GroupRanker group={g} />
-            {i === 5 && (
-              <div className="md:col-span-2 lg:col-span-3">
-                <AdSlot variant="leaderboard" />
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -180,7 +180,7 @@ function KnockoutStage({
         body={`Tap a team to crown them. Untouched matches use the ML's pick — ${made}/${matches.length} on the card so far.`}
       />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {matches.map((m, i) => (
+        {matches.map((m) => (
           <div key={m.matchId}>
             {/* An admin-finalised match is locked: players can't change it and it drives the ML pick. */}
             <MatchPicker
@@ -188,11 +188,6 @@ function KnockoutStage({
               mode={m.official ? "locked" : "live"}
               onPick={m.official ? undefined : (side) => setKoWinner(m.matchId, side)}
             />
-            {round === "R32" && i === 5 && (
-              <div className="sm:col-span-2 lg:col-span-3">
-                <AdSlot variant="in-article" />
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -302,35 +297,14 @@ function ResultsStage({
       ) : (
         <>
         <section className="mt-6 rounded-[14px] border-2 border-foreground bg-card p-5 text-center shadow-[4px_4px_0_var(--foil-blue)]">
-          <h2 className="display tracking-wide font-bold" style={{ color: "var(--pitch)" }}>🎉 Finalists Locked!</h2>
+          <h2 className="display tracking-wide font-bold" style={{ color: "var(--pitch)" }}>🎉 Champion Locked In!</h2>
           <p className="text-sm mt-1">
-            You voted as <strong>{myUniqueName}</strong>.
+            You played as <strong>{myUniqueName}</strong>
+            {champion && <> · your champion is <strong>{champion.name}</strong></>}.
           </p>
-          <div className="mt-4 max-w-md mx-auto text-left">
-            <label className="display text-[9px] tracking-[0.2em] uppercase text-muted-foreground block mb-1">
-              Your Shareable Referral Link
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                value={shortRefUrl(myVoteId)}
-                className="flex-1 rounded-md border-2 border-foreground/20 bg-background px-3 py-2 text-xs focus:outline-none"
-                onClick={(e) => (e.target as HTMLInputElement).select()}
-              />
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(shortRefUrl(myVoteId));
-                  alert("Link copied to clipboard!");
-                }}
-                className="rounded-md bg-foreground text-background display uppercase tracking-wider px-3 py-1.5 text-xs hover:bg-muted font-bold"
-              >
-                Copy
-              </button>
-            </div>
-          </div>
         </section>
-        {champion && myVoteId && (
+        <ReferralDashboard voteId={myVoteId} myName={myUniqueName ?? "A fan"} />
+        {champion && (
           <ShareStory
             userName={myUniqueName ?? "A fan"}
             championName={champion.name}
@@ -344,101 +318,16 @@ function ResultsStage({
 
       {sharedData && (
         <section className="mt-8 rounded-[14px] border-2 border-foreground bg-card p-5">
-          <h2 className="display tracking-wide mb-3">
-            Friends Comparison on {sharedData.referrer.name}'s link
+          <h2 className="display tracking-wide mb-1">
+            Comparing top-4 picks with {sharedData.referrer.name}'s bracket
           </h2>
           <p className="text-xs text-muted-foreground mb-4">
-            Compare finalists with {sharedData.referrer.name}'s picks ({sharedData.referrer.team1} & {sharedData.referrer.team2}, Champ: {sharedData.referrer.champion}).
+            {sharedData.referrer.name}'s champion: {sharedData.referrer.champion}. Similarity counts how
+            many of your top-4 teams match theirs.
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b-2 border-foreground/20 text-muted-foreground font-semibold display uppercase tracking-wider">
-                  <th className="py-2 pr-4">Friend Name</th>
-                  <th className="py-2 pr-4">Finalist 1</th>
-                  <th className="py-2 pr-4">Finalist 2</th>
-                  <th className="py-2 pr-4">Champion</th>
-                  <th className="py-2 text-right">Similarity</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-foreground/10 mono">
-                {/* Referrer row */}
-                <tr className="font-semibold text-foreground/80 bg-muted/40">
-                  <td className="py-2.5 pr-4 font-bold">{sharedData.referrer.name} (Host)</td>
-                  <td className="py-2.5 pr-4">{sharedData.referrer.team1}</td>
-                  <td className="py-2.5 pr-4">{sharedData.referrer.team2}</td>
-                  <td className="py-2.5 pr-4">{sharedData.referrer.champion}</td>
-                  <td className="py-2.5 text-right font-bold text-[var(--foil-gold)]">Host</td>
-                </tr>
-                {/* Parent Referrer row (the one who referred the host) */}
-                {sharedData.parent && (
-                  <tr className="italic text-foreground/75 bg-muted/10">
-                    <td className="py-2.5 pr-4 font-semibold">{sharedData.parent.name} (Referrer)</td>
-                    <td className="py-2.5 pr-4">{sharedData.parent.team1}</td>
-                    <td className="py-2.5 pr-4">{sharedData.parent.team2}</td>
-                    <td className="py-2.5 pr-4">{sharedData.parent.champion}</td>
-                    <td className="py-2.5 text-right font-medium">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        sharedData.parent.match_count === 2
-                          ? "bg-[color-mix(in_oklab,var(--foil-gold)_15%,transparent)] text-amber-700 dark:text-amber-300"
-                          : sharedData.parent.match_count === 1
-                          ? "bg-[color-mix(in_oklab,var(--foil-blue)_15%,transparent)] text-blue-700 dark:text-blue-300"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        {sharedData.parent.match_count === 2
-                          ? "Both Match! 🌟"
-                          : sharedData.parent.match_count === 1
-                          ? "1 Match 🤝"
-                          : "0 Match ❄️"}
-                      </span>
-                    </td>
-                  </tr>
-                )}
-                {/* Friends rows */}
-                {sharedData.friends.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-4 text-center text-muted-foreground italic">
-                      No friends have voted on this link yet. Share your link to compare!
-                    </td>
-                  </tr>
-                ) : (
-                  sharedData.friends.map((f: any) => {
-                    const isMe = f.name === myUniqueName;
-                    const simText = f.match_count === 2
-                      ? "Both Match! 🌟"
-                      : f.match_count === 1
-                      ? "1 Match 🤝"
-                      : "0 Match ❄️";
-                    return (
-                      <tr key={f.id} className={isMe ? "bg-muted/20 font-semibold" : ""}>
-                        <td className="py-2.5 pr-4 flex items-center gap-1 font-semibold">
-                          {f.name} {isMe && <span className="stamp text-[8px]" style={{color: "var(--stamp-red)"}}>YOU</span>}
-                        </td>
-                        <td className="py-2.5 pr-4">{f.team1}</td>
-                        <td className="py-2.5 pr-4">{f.team2}</td>
-                        <td className="py-2.5 pr-4">{f.champion}</td>
-                        <td className="py-2.5 text-right font-medium">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            f.match_count === 2
-                              ? "bg-[color-mix(in_oklab,var(--foil-gold)_15%,transparent)] text-amber-700 dark:text-amber-300"
-                              : f.match_count === 1
-                              ? "bg-[color-mix(in_oklab,var(--foil-blue)_15%,transparent)] text-blue-700 dark:text-blue-300"
-                              : "bg-muted text-muted-foreground"
-                          }`}>
-                            {simText}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <FriendsComparison data={sharedData} youName={myUniqueName ?? undefined} />
         </section>
       )}
-
-      <AdSlot variant="leaderboard" />
 
       {/* Your bracket trail */}
       <section className="mt-8 rounded-[14px] border-2 border-foreground/15 bg-card p-5">
@@ -487,6 +376,9 @@ function ResultsVote({
   if (!fin || !champ) return null;
   const t1 = fin.home.name;
   const t2 = fin.away.name;
+  // The bracket's final four (semi-finalists) are the user's top-4 picks, stored so the referral
+  // comparison can show full top lists, not just the champion.
+  const top4 = bracket.qf.map((m) => m.winnerTeam.name);
 
   async function go() {
     if (!voterName.trim()) {
@@ -496,14 +388,19 @@ function ResultsVote({
     setBusy(true);
     setErr("");
     try {
-      const res = await submit(t1, t2, champ!.name, voterName, refId || undefined, {
+      // A finished bracket casts ONE champion vote (the team it crowns). The finalists + top-4 ride
+      // along in the payload for the referral comparison, but only the champion lands on the board.
+      const res = await submit(champ!.name, undefined, champ!.name, voterName, refId || undefined, {
         groupOrder: state.groupOrder,
         knockoutPicks: state.knockoutPicks,
-        bias: state.bias,
         champion: champ!.name,
+        finalists: [t1, t2],
+        top4,
+        source: "play",
       });
       setMyVoteId(res.vote_id);
       setMyUniqueName(res.name);
+      saveMyVote({ voteId: res.vote_id, name: res.name });
       refreshShared();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not submit your vote.");
@@ -514,10 +411,10 @@ function ResultsVote({
 
   return (
     <section className="mt-6 rounded-[14px] border-2 border-foreground bg-card p-5 text-center shadow-[4px_4px_0_var(--foil-magenta)]">
-      <h2 className="display tracking-wide font-bold">Lock your call into the Fan Vote</h2>
+      <h2 className="display tracking-wide font-bold">Lock your champion into the Fan Vote</h2>
       <p className="text-sm text-muted-foreground mt-1 mb-4">
-        Your finalists <strong>{t1}</strong> and <strong>{t2}</strong> — add them to the people's
-        bracket and see how the crowd is calling it.
+        Your bracket crowns <strong>{champ.name}</strong> (final: {t1} vs {t2}). Submit to add your
+        champion to the people's board and see how the crowd is calling it.
       </p>
 
       <div className="max-w-sm mx-auto mb-4 text-left">
@@ -546,7 +443,7 @@ function ResultsVote({
           disabled={busy}
           className="inline-flex items-center gap-2 rounded-md bg-foreground text-background display uppercase tracking-wider px-4 py-2 disabled:opacity-50 hover:enabled:translate-y-[-2px] hover:enabled:shadow-[3px_5px_0_var(--stamp-red)] transition-all font-bold"
         >
-          {busy ? "Saving…" : "Submit my finalists"}
+          {busy ? "Saving…" : "Submit my champion"}
         </button>
         <a
           href="/"

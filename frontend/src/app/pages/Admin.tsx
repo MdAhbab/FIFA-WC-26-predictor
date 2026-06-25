@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ShieldCheck, LogOut, Trophy, Users, Trash2, Zap,
-  CheckCircle, AlertTriangle, Lock, ChevronDown, CalendarDays
+  CheckCircle, AlertTriangle, Lock, ChevronDown, CalendarDays,
+  ListOrdered, ChevronUp
 } from "lucide-react";
 import { getMLBracket, type KnockoutResult } from "../lib/PicksContext";
 import { bootstrap } from "../lib/data";
@@ -577,21 +578,145 @@ function KnockoutResultsPanel({ token, ok, err }: { token: string; ok: (m: strin
 }
 
 // ============================================================
+// Group Standings Panel — set positions / points directly
+// ============================================================
+type StandRow = { team: string; played: number; wins: number; draws: number; losses: number; gf: number; ga: number; pts: number };
+const STAT_COLS: { key: keyof Omit<StandRow, "team">; label: string }[] = [
+  { key: "played", label: "MP" }, { key: "wins", label: "W" }, { key: "draws", label: "D" },
+  { key: "losses", label: "L" }, { key: "gf", label: "GF" }, { key: "ga", label: "GA" },
+  { key: "pts", label: "Pts" },
+];
+
+function StandingsPanel({ token, ok, err }: { token: string; ok: (m: string) => void; err: (m: string) => void }) {
+  const [group, setGroup] = useState("A");
+  const [rows, setRows] = useState<StandRow[]>([]);
+  const [hasOverride, setHasOverride] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  function loadGroup(g: string) {
+    fetch("/api/results").then(r => r.json()).then(rd => {
+      const ovr = (rd.standings || {})[g] as StandRow[] | undefined;
+      if (ovr && ovr.length) {
+        setRows(ovr.map(s => ({ team: s.team, played: s.played, wins: s.wins, draws: s.draws, losses: s.losses, gf: s.gf, ga: s.ga, pts: s.pts })));
+        setHasOverride(true);
+        return;
+      }
+      // No override yet — prefill from the model's current standings so the admin edits from a baseline.
+      let st: any[] = [];
+      try { st = getMLBracket().effectiveStandings[g] ?? []; } catch { st = []; }
+      setRows(st.map(s => ({ team: s.team.name, played: s.played, wins: s.wins, draws: s.draws, losses: s.losses, gf: s.gf, ga: s.ga, pts: s.pts })));
+      setHasOverride(false);
+    }).catch(() => {});
+  }
+  useEffect(() => { loadGroup(group); /* eslint-disable-next-line */ }, [group]);
+
+  function setCell(i: number, key: keyof Omit<StandRow, "team">, val: string) {
+    const n = Math.max(0, parseInt(val) || 0);
+    setRows(rs => rs.map((r, idx) => idx === i ? { ...r, [key]: n } : r));
+  }
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= rows.length) return;
+    setRows(rs => { const c = [...rs]; [c[i], c[j]] = [c[j], c[i]]; return c; });
+  }
+
+  async function save() {
+    setBusy(true);
+    try {
+      await api("POST", "/api/admin/standings", { group, rows }, token);
+      ok(`Standings saved for Group ${group} — table + R32 seeding updated, ML re-run.`);
+      await bootstrap().catch(() => {});
+      setHasOverride(true);
+    } catch (e) { err(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(false); }
+  }
+  async function clearOverride() {
+    setBusy(true);
+    try {
+      await api("DELETE", `/api/admin/standings/${group}`, undefined, token);
+      ok(`Override cleared for Group ${group} — back to the model's table.`);
+      await bootstrap().catch(() => {});
+      loadGroup(group);
+    } catch (e) { err(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <Panel icon={<ListOrdered className="size-5" />} title="Group Standings" accent="var(--pitch)">
+      <div className="flex flex-wrap gap-1">
+        {GROUP_LETTERS.map(g => (
+          <button key={g} onClick={() => setGroup(g)}
+            className={`display text-xs tracking-wider px-2.5 py-1 rounded border-2 transition-colors ${group === g ? "bg-foreground text-background border-foreground" : "border-foreground/20 hover:bg-muted"}`}>
+            {g}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground -mt-1">
+        Set the table exactly as it stands. Row order = finishing position (drives who plays whom in the R32).
+        Saving overrides the model, fixes the displayed table and re-runs the ML title race.
+        {hasOverride && <span style={{ color: "var(--foil-gold)" }}> · override active</span>}
+      </p>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="text-muted-foreground display uppercase tracking-wider">
+              <th className="py-1 pr-1 text-left">#</th>
+              <th className="py-1 pr-2 text-left">Team</th>
+              {STAT_COLS.map(c => <th key={c.key} className="py-1 px-1 text-center w-9">{c.label}</th>)}
+              <th className="py-1 px-1 text-center w-9">GD</th>
+              <th className="py-1 pl-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.team} className="border-t border-foreground/10">
+                <td className="py-1 pr-1 mono font-bold">{i + 1}</td>
+                <td className="py-1 pr-2 truncate max-w-[8rem]">{r.team}</td>
+                {STAT_COLS.map(c => (
+                  <td key={c.key} className="py-1 px-0.5">
+                    <input type="number" min="0" value={r[c.key]} onChange={e => setCell(i, c.key, e.target.value)}
+                      className="w-9 rounded border border-foreground/20 bg-background px-1 py-0.5 text-center mono text-xs focus:outline-none focus:border-foreground" />
+                  </td>
+                ))}
+                <td className="py-1 px-1 text-center mono tabular-nums">{r.gf - r.ga}</td>
+                <td className="py-1 pl-1">
+                  <div className="flex flex-col">
+                    <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}
+                      className="size-4 inline-flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"><ChevronUp className="size-3" /></button>
+                    <button type="button" aria-label="Move down" disabled={i === rows.length - 1} onClick={() => move(i, 1)}
+                      className="size-4 inline-flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-25"><ChevronDown className="size-3" /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 pt-1">
+        {hasOverride && <Btn variant="ghost" icon={<Trash2 className="size-4" />} disabled={busy} onClick={clearOverride}>Clear override</Btn>}
+        <Btn variant="primary" icon={<ListOrdered className="size-4" />} disabled={busy || rows.length === 0} onClick={save}>{busy ? "Saving…" : "Save standings"}</Btn>
+      </div>
+    </Panel>
+  );
+}
+
+// ============================================================
 // Vote Control Panel
 // ============================================================
 function VotePanel({ token, ok, err }: { token: string; ok: (m: string) => void; err: (m: string) => void }) {
-  const [team1, setTeam1] = useState("");
-  const [team2, setTeam2] = useState("");
   const [champion, setChampion] = useState("");
-  const [count, setCount] = useState("50");
+  const [count, setCount] = useState("10");
   const [busy, setBusy] = useState(false);
   const [clearing, setClearing] = useState(false);
 
   async function inject() {
+    if (!champion.trim()) { err("Enter a champion team to inject."); return; }
     setBusy(true);
     try {
-      await api("POST", `/api/admin/vote_inject?count=${count}`, { team1, team2, champion }, token);
-      ok(`Injected ${count} votes for ${team1} vs ${team2} (champ: ${champion})`);
+      await api("POST", `/api/admin/vote_inject?count=${count}`, { team1: champion, champion }, token);
+      ok(`Injected ${count} champion vote(s) for ${champion}`);
     } catch (e) { err(e instanceof Error ? e.message : "Failed"); }
     finally { setBusy(false); }
   }
@@ -608,10 +733,9 @@ function VotePanel({ token, ok, err }: { token: string; ok: (m: string) => void;
 
   return (
     <Panel icon={<Users className="size-5" />} title="Fan Vote Control" accent="var(--foil-magenta)">
-      <Field label="Finalist Team 1"><Input type="text" value={team1} onChange={e => setTeam1(e.target.value)} placeholder="Country name" /></Field>
-      <Field label="Finalist Team 2"><Input type="text" value={team2} onChange={e => setTeam2(e.target.value)} placeholder="Country name" /></Field>
-      <Field label="Champion Pick"><Input type="text" value={champion} onChange={e => setChampion(e.target.value)} placeholder="Country name" /></Field>
-      <Field label="Inject Count (spam factor 😈)"><Input type="number" min="1" max="9999" value={count} onChange={e => setCount(e.target.value)} /></Field>
+      <p className="text-xs text-muted-foreground -mt-1">Inject champion votes (one champion per inject). These land on the people's board exactly like a user's champion pick.</p>
+      <Field label="Champion to back"><Input type="text" value={champion} onChange={e => setChampion(e.target.value)} placeholder="Country name" /></Field>
+      <Field label="Inject Count"><Input type="number" min="1" max="9999" value={count} onChange={e => setCount(e.target.value)} /></Field>
       <div className="flex gap-3 pt-1">
         <Btn variant="primary" icon={<Users className="size-4" />} disabled={busy} onClick={inject} className="flex-1">{busy ? "Injecting…" : "Inject Votes"}</Btn>
         <Btn variant="danger" icon={<Trash2 className="size-4" />} disabled={clearing} onClick={clear} className="flex-1">{clearing ? "Clearing…" : "Clear All"}</Btn>
@@ -642,7 +766,10 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
       </motion.header>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <GroupResultsPanel token={session.token} ok={ok} err={err} />
+        <div className="flex flex-col gap-6">
+          <GroupResultsPanel token={session.token} ok={ok} err={err} />
+          <StandingsPanel token={session.token} ok={ok} err={err} />
+        </div>
         <div className="flex flex-col gap-6">
           <KnockoutResultsPanel token={session.token} ok={ok} err={err} />
           <VotePanel token={session.token} ok={ok} err={err} />

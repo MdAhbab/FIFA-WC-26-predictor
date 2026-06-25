@@ -3,7 +3,7 @@ import type {
   BootstrapData,
   MatchDetail,
   NewsItem,
-  PoolPlayer,
+  SharedVoteData,
   StrengthData,
   VoteSummary,
 } from "./types";
@@ -41,12 +41,9 @@ export const api = {
   bootstrap: () => getJSON<BootstrapData>("/bootstrap"),
   strength: (body: { team_bias?: Record<string, number>; squads?: Record<string, unknown>; knockout_goals?: Record<string, { home: number; away: number }> }) =>
     postJSON<StrengthData>("/strength", body),
-  players: (team: string) =>
-    getJSON<{ team: string; players: PoolPlayer[] }>(`/players/${encodeURIComponent(team)}`),
-  vote: (body: { team1: string; team2: string; champion?: string; name?: string; referrer_vote_id?: number; payload?: unknown }) =>
+  vote: (body: { team1: string; team2?: string; champion?: string; name?: string; referrer_vote_id?: number; payload?: unknown }) =>
     postJSON<{ ok: boolean; vote_id: number; name: string; votes: VoteSummary }>("/vote", body),
-  voteShared: (voteId: number) =>
-    getJSON<{ referrer: { id: number; name: string; team1: string; team2: string; champion: string }; friends: Array<{ id: number; name: string; team1: string; team2: string; champion: string; ts: string; match_count: number }> }>(`/vote/shared/${voteId}`),
+  voteShared: (voteId: number) => getJSON<SharedVoteData>(`/vote/shared/${voteId}`),
   votes: () => getJSON<VoteSummary>("/votes"),
   match: (home: string, away: string, matchId?: number) =>
     getJSON<MatchDetail>(

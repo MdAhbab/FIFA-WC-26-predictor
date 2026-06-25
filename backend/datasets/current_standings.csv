@@ -1,0 +1,9 @@
+group,position,team,played,wins,draws,losses,gf,ga,pts
+# Current real-world group standings, used by `python maintenance.py seed-standings`.
+# Group L is filled from the live FIFA table; add the other groups' rows (position 1..4 per group)
+# as the tournament progresses, then re-run seed-standings. Each group must list all 4 teams.
+# gd is derived (gf-ga) and is not stored here.
+L,1,England,2,1,1,0,4,2,4
+L,2,Ghana,2,1,1,0,1,0,4
+L,3,Croatia,2,1,0,1,3,4,3
+L,4,Panama,2,0,0,2,0,2,0

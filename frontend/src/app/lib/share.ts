@@ -6,8 +6,8 @@
 //     native-app-only, needs a Facebook App ID + pasteboard). The only browser path to an IG story is
 //     the native Web Share sheet on mobile -> user picks Instagram -> Story. On desktop we can only
 //     save the image and open instagram.com for a manual upload.
-//   * Facebook: facebook.com/sharer/sharer.php?u=<link> (desktop) / m.facebook.com/sharer.php (mobile)
-//     lets the user choose "Your Story" — a link->story path (image->story needs FB Login + Stories API).
+//   * Messenger: fb-messenger://share?link=<link> opens the app share sheet on mobile; desktop has no
+//     link-prefill dialog without a registered FB App ID, so we open messenger.com + copy the link.
 //   * WhatsApp: wa.me / whatsapp:// share text+link to a chat (Status can't be pre-filled by anyone).
 import QRCode from "qrcode";
 
@@ -413,11 +413,22 @@ export function shareToX(text: string, url: string) {
   openUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`);
 }
 
-/** Facebook: the sharer lets the user choose "Your Story" (mobile app / desktop web). */
-export function shareToFacebook(url: string) {
-  const u = encodeURIComponent(url);
-  if (isMobile()) openUrl(`https://m.facebook.com/sharer.php?u=${u}`, true);
-  else openUrl(`https://www.facebook.com/sharer/sharer.php?u=${u}`);
+/**
+ * Messenger: send the referral link in a chat. On mobile we deep-link into the Messenger app's share
+ * sheet (`fb-messenger://share`); on desktop there is no link-prefill dialog without a registered FB
+ * App ID, so we open Messenger web and copy the link to the clipboard so the user can paste it.
+ */
+export function shareToMessenger(url: string) {
+  if (isMobile()) {
+    openUrl(`fb-messenger://share?link=${encodeURIComponent(url)}`, true);
+    return;
+  }
+  try {
+    navigator.clipboard?.writeText(url);
+  } catch {
+    /* ignore */
+  }
+  openUrl("https://www.messenger.com/");
 }
 
 /**
