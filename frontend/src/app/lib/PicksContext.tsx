@@ -10,9 +10,9 @@ import {
 } from "react";
 import {
   GROUP_LETTERS,
-  VENUES,
   applyStrength as applyStrengthData,
   getAllGroupForecasts,
+  getKnockoutTemplate,
   getOfficialResults,
   getScheduleDate,
   getTitleRace,
@@ -23,6 +23,7 @@ import { triggerKick } from "./KickFx";
 import type {
   GroupForecast,
   GroupStanding,
+  KnockoutSlotTemplate,
   OfficialResult,
   PoolPlayer,
   RawTeam,
@@ -78,7 +79,9 @@ type Action =
   | { type: "RESET" }
   | { type: "HYDRATE"; state: PicksState };
 
-const STORAGE_KEY = "wc26-picks-v1";
+// v2: knockout picks are keyed to the REAL bracket routing (K{n} = competition match 72+n per
+// knockout_slots.csv), so v1 picks made against the old invented pairings must not be replayed.
+const STORAGE_KEY = "wc26-picks-v2";
 
 export function createInitialPicksState(): PicksState {
   return defaultState();
@@ -260,18 +263,6 @@ function applyUserPick(
   };
 }
 
-function dateForKO(offset: number) {
-  const d = new Date(2026, 6, 1); // July 1, 2026
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
-}
-
-function venueFor(seed: string) {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return VENUES[h % VENUES.length];
-}
-
 // Rounds whose goals the user can nudge with the steppers (R32/R16/QF). Kept in sync with MatchPicker.
 const GOAL_EDITABLE_ROUNDS = new Set<KnockoutResult["round"]>(["R32", "R16", "QF"]);
 
@@ -282,7 +273,7 @@ function makeKO(
   away: RawTeam,
   picks: Record<string, "home" | "away">,
   goalsOverride: Record<string, { home: number; away: number }>,
-  dayOffset: number,
+  tpl: KnockoutSlotTemplate,
   autoPredicted: boolean,
   liveElo: Map<string, number>,
   official?: Map<number, OfficialResult>,
@@ -290,8 +281,8 @@ function makeKO(
   // Live Elo each side carries into this match (already boosted by prior rounds / group finish).
   const homeElo = Math.round(liveElo.get(home.name) ?? home.elo);
   const awayElo = Math.round(liveElo.get(away.name) ?? away.elo);
-  // Admin-edited date (per competition match id) wins over the cosmetic generated date.
-  const date = getScheduleDate(koCompetitionId(matchId)) ?? dateForKO(dayOffset);
+  // Admin-edited date (per competition match id) wins over the fixture's scheduled date.
+  const date = (getScheduleDate(koCompetitionId(matchId)) ?? tpl.date).slice(0, 10);
 
   const r = predictMatch(home, away, matchId, { allowDraw: false });
   const mlWinner = r.winner as "home" | "away";
@@ -351,7 +342,7 @@ function makeKO(
     matchId, round, home, away, homeElo, awayElo,
     homeGoals, awayGoals, winner, winnerTeam, penalties,
     corners: r.corners, yellows: r.yellows, reds: r.reds,
-    date, venue: venueFor(matchId),
+    date, venue: tpl.venue,
     userOverride, autoPredicted,
     ...(isOfficial ? { official: true } : {}),
   };
@@ -380,48 +371,31 @@ export function deriveBracket(state: PicksState): DerivedBracket {
       .filter((s): s is GroupStanding => !!s);
   }
 
-  // Pick 8 best third-placed teams by elo
-  const thirds = GROUP_LETTERS.map((g) => ({
-    g,
-    team: effectiveStandings[g][2].team,
-  }));
-  thirds.sort((a, b) => b.team.elo - a.team.elo);
-  const bestThirds = new Set(thirds.slice(0, 8).map((t) => t.team.name));
+  // The official bracket template (knockout_slots.csv, served by the backend): which group
+  // position / prior match feeds each of the 32 knockout slots. This is the single source of truth
+  // for who-plays-whom — the app no longer invents its own pairing scheme.
+  const template = getKnockoutTemplate();
 
-  // Build the 32-team field
-  const winners: { team: RawTeam; tag: string }[] = GROUP_LETTERS.map((g) => ({
-    team: effectiveStandings[g][0].team,
-    tag: `1${g}`,
-  }));
-  const runnersUp: { team: RawTeam; tag: string }[] = GROUP_LETTERS.map((g) => ({
-    team: effectiveStandings[g][1].team,
-    tag: `2${g}`,
-  }));
-  const thirdsAdvancing: { team: RawTeam; tag: string }[] = GROUP_LETTERS
-    .filter((g) => bestThirds.has(effectiveStandings[g][2].team.name))
-    .map((g) => ({
-      team: effectiveStandings[g][2].team,
-      tag: `3${g}`,
-    }));
+  // Best third-placed teams. The template pins each Best-3rd slot to its real group once the group
+  // stage is decided ("Best 3rd (Group D)"); with all 8 pinned, the qualifying thirds are exactly
+  // those groups' third-placed teams. Otherwise rank thirds by the real table metrics
+  // (pts, then GD, then GF) — never by raw Elo, which is a model rating, not a result.
+  const pinnedThirdGroups = template
+    .flatMap((t) => [t.slotHome, t.slotAway])
+    .map((s) => /^Best 3rd \(Group ([A-L])\)$/.exec(s)?.[1])
+    .filter((g): g is string => !!g);
+  const bestThirds =
+    pinnedThirdGroups.length === 8
+      ? new Set(pinnedThirdGroups.map((g) => effectiveStandings[g][2].team.name))
+      : new Set(
+          GROUP_LETTERS.map((g) => effectiveStandings[g][2])
+            .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf)
+            .slice(0, 8)
+            .map((s) => s.team.name),
+        );
 
+  // The 32-team field in slot-tag form (1A/2B/3D...), listed R32-match order for display.
   const qualifiers: { team: RawTeam; tag: string }[] = [];
-  const usedTags = new Set<string>();
-  const push = (q: { team: RawTeam; tag: string } | undefined) => {
-    if (q && !usedTags.has(q.tag)) {
-      qualifiers.push(q);
-      usedTags.add(q.tag);
-    }
-  };
-  for (let i = 0; i < 12; i++) {
-    push(winners[i]);
-    if (i < 4) push(thirdsAdvancing[i]);
-    push(runnersUp[i]);
-    if (i >= 4 && i < 8) push(thirdsAdvancing[i]);
-  }
-  for (const q of [...winners, ...runnersUp, ...thirdsAdvancing]) {
-    if (qualifiers.length >= 32) break;
-    push(q);
-  }
 
   // Live Elo: base ratings + group-finish bonus (1st +10, 2nd +5) entering the knockouts. makeKO
   // then compounds the per-goal and stage-survival boosts as each tie is resolved in bracket order,
@@ -434,108 +408,99 @@ export function deriveBracket(state: PicksState): DerivedBracket {
     liveElo.set(ru.name, ru.elo + GROUP_RUNNER_BONUS);
   }
 
-  // R32 — auto until user reaches r32 stage. We compute ML defaults always
-  // and only honor user picks if the stage is unlocked.
+  // ---- Slot resolution against the template ----
+  const winnerOfMatch = new Map<number, RawTeam>();
+  const loserOfMatch = new Map<number, RawTeam>();
+  const usedThirds = new Set<string>();
+
+  const slotTag = (slot: string): string => {
+    let m = /^Winner Group ([A-L])$/.exec(slot);
+    if (m) return `1${m[1]}`;
+    m = /^Runner-up Group ([A-L])$/.exec(slot);
+    if (m) return `2${m[1]}`;
+    m = /^Best 3rd \(Group ([A-L])\)$/.exec(slot);
+    if (m) return `3${m[1]}`;
+    return slot;
+  };
+
+  const resolveSlot = (slot: string): RawTeam | undefined => {
+    let m = /^Winner Group ([A-L])$/.exec(slot);
+    if (m) return effectiveStandings[m[1]][0].team;
+    m = /^Runner-up Group ([A-L])$/.exec(slot);
+    if (m) return effectiveStandings[m[1]][1].team;
+    m = /^Best 3rd \(Group ([A-L])\)$/.exec(slot);
+    if (m) {
+      const t = effectiveStandings[m[1]][2].team;
+      usedThirds.add(t.name);
+      return t;
+    }
+    if (slot.includes("Best 3rd")) {
+      // Legacy multi-group slot ("Best 3rd (Groups A/B/C/D/F)"): take the first still-unassigned
+      // qualifying third from an allowed group. Approximate, but only ever hit pre-pinning.
+      const g = /Groups?\s+([A-L/]+)/.exec(slot);
+      const allowed = new Set(g ? g[1].split("/") : []);
+      for (const letter of GROUP_LETTERS) {
+        const t = effectiveStandings[letter][2].team;
+        if (allowed.has(letter) && bestThirds.has(t.name) && !usedThirds.has(t.name)) {
+          usedThirds.add(t.name);
+          return t;
+        }
+      }
+      return undefined;
+    }
+    m = /^Winner Match (\d+)$/.exec(slot);
+    if (m) return winnerOfMatch.get(parseInt(m[1], 10));
+    m = /^Loser Match (\d+)$/.exec(slot);
+    if (m) return loserOfMatch.get(parseInt(m[1], 10));
+    return undefined;
+  };
+
+  // Internal id kept as "K{n}" so koCompetitionId round-trips (K1..K16 = 73..88, ..., K31 = 104).
+  const internalId = (mid: number) => `K${mid === 104 ? 31 : mid - 72}`;
+  const templateRound = (name: string) =>
+    template.filter((t) => t.round === name).sort((a, b) => a.matchId - b.matchId);
+
+  const buildRound = (
+    roundName: string,
+    round: KnockoutResult["round"],
+    autoPredicted: boolean,
+    collectQualifiers = false,
+  ): KnockoutResult[] => {
+    const out: KnockoutResult[] = [];
+    for (const tpl of templateRound(roundName)) {
+      const home = resolveSlot(tpl.slotHome);
+      const away = resolveSlot(tpl.slotAway);
+      if (!home || !away) continue;
+      if (collectQualifiers) {
+        qualifiers.push({ team: home, tag: slotTag(tpl.slotHome) });
+        qualifiers.push({ team: away, tag: slotTag(tpl.slotAway) });
+      }
+      const ko = makeKO(
+        internalId(tpl.matchId), round, home, away,
+        state.knockoutPicks, state.knockoutGoals,
+        tpl, autoPredicted, liveElo, official,
+      );
+      winnerOfMatch.set(tpl.matchId, ko.winnerTeam);
+      loserOfMatch.set(tpl.matchId, ko.winner === "home" ? ko.away : ko.home);
+      out.push(ko);
+    }
+    return out;
+  };
+
+  // R32 — auto until user reaches r32 stage. ML defaults always computed; user picks only honored
+  // once the stage is unlocked; official results override everything inside makeKO.
   const r32Unlocked = state.stage !== "intro" && state.stage !== "groups";
-  const r32: KnockoutResult[] = [];
-  for (let i = 0; i < 16; i++) {
-    const a = qualifiers[i * 2];
-    const b = qualifiers[i * 2 + 1];
-    if (!a || !b) continue;
-    r32.push(
-      makeKO(
-        `K${i + 1}`,
-        "R32",
-        a.team,
-        b.team,
-        state.knockoutPicks,
-        state.knockoutGoals,
-        i,
-        !r32Unlocked,
-        liveElo,
-        official,
-      ),
-    );
-  }
+  const r32 = buildRound("Round of 32", "R32", !r32Unlocked, true);
 
   const r16Unlocked = ["r16", "qf", "results"].includes(state.stage);
-  const r16: KnockoutResult[] = [];
-  for (let i = 0; i < r32.length / 2; i++) {
-    const a = r32[i * 2].winnerTeam;
-    const b = r32[i * 2 + 1].winnerTeam;
-    r16.push(
-      makeKO(
-        `K${17 + i}`,
-        "R16",
-        a,
-        b,
-        state.knockoutPicks,
-        state.knockoutGoals,
-        16 + i,
-        !r16Unlocked,
-        liveElo,
-        official,
-      ),
-    );
-  }
+  const r16 = buildRound("Round of 16", "R16", !r16Unlocked);
 
   const qfUnlocked = ["qf", "results"].includes(state.stage);
-  const qf: KnockoutResult[] = [];
-  for (let i = 0; i < r16.length / 2; i++) {
-    const a = r16[i * 2].winnerTeam;
-    const b = r16[i * 2 + 1].winnerTeam;
-    qf.push(
-      makeKO(
-        `K${25 + i}`,
-        "QF",
-        a,
-        b,
-        state.knockoutPicks,
-        state.knockoutGoals,
-        24 + i,
-        !qfUnlocked,
-        liveElo,
-        official,
-      ),
-    );
-  }
+  const qf = buildRound("Quarter-final", "QF", !qfUnlocked);
 
-  // SF + Final always ML-only
-  const sf: KnockoutResult[] = [];
-  for (let i = 0; i < qf.length / 2; i++) {
-    const a = qf[i * 2].winnerTeam;
-    const b = qf[i * 2 + 1].winnerTeam;
-    sf.push(
-      makeKO(
-        `K${29 + i}`,
-        "SF",
-        a,
-        b,
-        state.knockoutPicks,
-        state.knockoutGoals,
-        28 + i,
-        true,
-        liveElo,
-        official,
-      ),
-    );
-  }
-
-  let final: KnockoutResult | null = null;
-  if (sf.length === 2) {
-    final = makeKO(
-      "K31",
-      "Final",
-      sf[0].winnerTeam,
-      sf[1].winnerTeam,
-      state.knockoutPicks,
-      state.knockoutGoals,
-      31,
-      true,
-      liveElo,
-      official,
-    );
-  }
+  // SF + Final always ML-only (the third-place playoff isn't shown in the app).
+  const sf = buildRound("Semi-final", "SF", true);
+  const final = buildRound("Final", "Final", true)[0] ?? null;
 
   const champion = final ? final.winnerTeam : null;
   return {

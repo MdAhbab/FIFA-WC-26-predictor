@@ -387,11 +387,20 @@ def build_payload(config: dict | None = None, n_sims: int = MC_BASE_SIMS):
                    "final": d["final"], "semi": d["semi"], "quarter": d["quarter"], "r16": d["r16"]}
                   for d in cp]
     champ_prob = {d["team"]: d["champion"] for d in cp}
+    # The official FIFA bracket template (from knockout_slots.csv): which group position / prior
+    # match feeds each knockout slot. The frontend resolves it against the (locked) group standings
+    # and official results, so the app renders the REAL bracket routing instead of inventing one.
+    knockout_template = [
+        {"matchId": int(r.match_id), "round": str(r.round), "date": str(r.date_utc)[:10],
+         "venue": str(r.venue), "slotHome": str(r.slot_home), "slotAway": str(r.slot_away)}
+        for r in ENG['knock_df'].itertuples(index=False)
+    ]
     return {
         "teams": teams,
         "group_letters": sorted(ENG['groups']),
         "groups": _group_forecasts(gp, eff, lam),
         "pairwise": _pairwise(eff, lam),
+        "knockout": knockout_template,
         "title_race": title_race,
         "meta": {"champion": bv["champion"], "champion_iso": iso(bv["champion"]),
                  "champion_prob": round(champ_prob.get(bv["champion"], 0.0), 4),
@@ -491,8 +500,32 @@ def _attach_session(request: Request, response: Response) -> str:
     return sid
 
 
+def _auto_seed_from_csvs():
+    """Idempotently apply the repo's real-results CSVs (group results, final standings, knockout
+    results) to whatever DB this instance points at. This is what makes a plain
+    `git pull && docker compose up -d --build` on the VM ship new official data: the live DB is on a
+    Docker volume, so without this the freshly-built image would keep serving the volume's stale
+    results until someone exec'd the maintenance commands by hand. Upserts only touch match ids
+    present in the CSVs, so admin-entered results for still-unlisted matches survive restarts.
+    Set WC_AUTO_SEED=0 to disable."""
+    if os.environ.get("WC_AUTO_SEED", "1") != "1":
+        return
+    try:
+        import maintenance
+        ds = HERE / "datasets"
+        if (ds / "current_results.csv").exists():
+            maintenance.seed_results(None)
+        if (ds / "current_standings.csv").exists():
+            maintenance.seed_standings(None)
+        if (ds / "current_knockout_results.csv").exists():
+            maintenance.seed_knockout_results(None)
+    except Exception as e:  # noqa: BLE001 — a bad CSV must never stop the app from booting
+        print(f"[startup] auto-seed from CSVs failed (continuing with DB as-is): {e}")
+
+
 @app.on_event("startup")
 def _startup():
+    _auto_seed_from_csvs()          # repo CSVs -> official results (so a redeploy ships new data)
     _load_results()                 # replay any saved official results onto team state
     _load_schedule()                # load admin-edited match dates
     _load_standings()               # load admin group-standings overrides

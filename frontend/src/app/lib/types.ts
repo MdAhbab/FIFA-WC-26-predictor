@@ -174,11 +174,23 @@ export interface VoteSummary {
   champion_top: VoteEntry[];
 }
 
+/** One row of the official FIFA bracket template (backend knockout_slots.csv): which group
+ *  position / prior match feeds each knockout slot. */
+export interface KnockoutSlotTemplate {
+  matchId: number; // competition match id 73-104
+  round: string; // "Round of 32" | "Round of 16" | "Quarter-final" | "Semi-final" | "Third-place playoff" | "Final"
+  date: string; // YYYY-MM-DD
+  venue: string;
+  slotHome: string; // e.g. "Winner Group A", "Best 3rd (Group D)", "Winner Match 73"
+  slotAway: string;
+}
+
 export interface StrengthData {
   teams: RawTeam[];
   group_letters: string[];
   groups: Record<string, GroupForecast>;
   pairwise: Record<string, Record<string, PairResult>>;
+  knockout?: KnockoutSlotTemplate[];
   title_race: TitleRaceEntry[];
   meta: Meta;
 }

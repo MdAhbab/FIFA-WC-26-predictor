@@ -169,7 +169,10 @@ function KnockoutStage({
   const matches =
     round === "R32" ? bracket.r32 : round === "R16" ? bracket.r16 : bracket.qf;
 
-  const made = matches.filter((m) => state.knockoutPicks[m.matchId]).length;
+  // Matches already decided for real are locked — only the rest are the player's to call.
+  const pickable = matches.filter((m) => !m.official);
+  const made = pickable.filter((m) => state.knockoutPicks[m.matchId]).length;
+  const lockedCount = matches.length - pickable.length;
   const stageId: Stage = round === "R32" ? "r32" : round === "R16" ? "r16" : "qf";
 
   return (
@@ -177,7 +180,11 @@ function KnockoutStage({
       <StageHeader
         eyebrow={`Stage ${round === "R32" ? 2 : round === "R16" ? 3 : 4} of 5`}
         title={title}
-        body={`Tap a team to crown them. Untouched matches use the ML's pick — ${made}/${matches.length} on the card so far.`}
+        body={
+          lockedCount > 0
+            ? `${lockedCount} of these ties already happened — they're locked to the real result. Tap a team to crown them in the rest; untouched matches use the ML's pick — ${made}/${pickable.length} on the card so far.`
+            : `Tap a team to crown them. Untouched matches use the ML's pick — ${made}/${pickable.length} on the card so far.`
+        }
       />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {matches.map((m) => (

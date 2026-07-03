@@ -85,7 +85,7 @@ export function MatchPicker({ match, onPick, mode }: Props) {
             YOURS
           </span>
         )}
-        {userGoals && (
+        {userGoals && !match.official && (
           <span className="text-[10px] display tracking-widest text-[var(--foil-gold)]">
             SCORED
           </span>
