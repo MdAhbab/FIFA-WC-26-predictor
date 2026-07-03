@@ -1,0 +1,22 @@
+match_id,home,away,hg,ag,winner_team
+# Real 2026 FIFA World Cup Round of 32 results (source: Wikipedia / FIFA match centre), as of 2026-07-03.
+# Applied to the live DB as official results by: python maintenance.py seed-knockout-results
+# home/away must match the app's OWN bracket resolution for that match_id (winners/runners/best-3rd,
+# computed from current_results.csv + current_standings.csv) — the seeder checks this and skips any
+# row that no longer matches instead of silently mis-seeding a slot. winner_team is required when
+# hg==ag (extra time ended level, so the shootout result decides the winner).
+# Matches 86 (Australia v Egypt), 87 (Argentina v Cabo Verde) and 88 (Colombia v Ghana) had not been
+# played yet as of 2026-07-03 — add them here once final.
+73,South Africa,Canada,0,1,Canada
+74,Brazil,Japan,2,1,Brazil
+75,Germany,Paraguay,1,1,Paraguay
+76,Netherlands,Morocco,1,1,Morocco
+77,Côte d'Ivoire,Norway,1,2,Norway
+78,France,Sweden,3,0,France
+79,Mexico,Ecuador,2,0,Mexico
+80,England,DR Congo,2,1,England
+81,Belgium,Senegal,3,2,Belgium
+82,USA,Bosnia and Herzegovina,2,0,USA
+83,Portugal,Croatia,2,1,Portugal
+84,Spain,Austria,3,0,Spain
+85,Switzerland,Algeria,2,0,Switzerland

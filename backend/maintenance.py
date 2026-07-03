@@ -9,6 +9,7 @@ inside the running container and it targets the live DB automatically:
     docker compose exec predictor python maintenance.py reset-shares
     docker compose exec predictor python maintenance.py seed-results          # real group results -> official_results
     docker compose exec predictor python maintenance.py seed-standings        # admin standings overrides (optional)
+    docker compose exec predictor python maintenance.py seed-knockout-results # real knockout results -> official_results
 
 Outside Docker, point it at a DB explicitly:
     WC_DB_PATH=/path/to/wc26.db python maintenance.py stats
@@ -23,6 +24,8 @@ import sqlite3
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+import pandas as pd
 
 import db
 
@@ -207,6 +210,71 @@ def seed_results(csv_path: str | None) -> None:
         print("Restart the app (or it picks up on next change) to apply.")
 
 
+def seed_knockout_results(csv_path: str | None) -> None:
+    """Apply real knockout results from a CSV (default datasets/current_knockout_results.csv).
+
+    Unlike group fixtures, knockout pairings aren't fixed in advance (they depend on real group
+    standings + the best-third-place allocation), so each row gives the match_id directly:
+    (match_id, home, away, hg, ag, winner_team). `winner_team` is required when hg==ag (the match
+    went to penalties) since the engine can't infer a shootout winner from the scoreline alone.
+    We sanity-check each row against the engine's OWN currently-resolved team for that slot (built
+    from the official group results + standings override already in the DB) and skip + warn on a
+    mismatch rather than silently seeding the wrong team into a bracket slot."""
+    import engine
+    db.init_db()
+    path = Path(csv_path) if csv_path else (Path(__file__).resolve().parent / "datasets" / "current_knockout_results.csv")
+    if not path.exists():
+        print(f"CSV not found: {path}", file=sys.stderr)
+        sys.exit(1)
+
+    ks = pd.read_csv(_find_dataset("knockout_slots.csv"))
+    round_of = {int(r.match_id): str(r.round) for r in ks.itertuples(index=False)}
+
+    official = {r["match_id"]: {"hg": r["home_goals"], "ag": r["away_goals"], "home": r["home_team"],
+                                 "away": r["away_team"], "winner_team": r.get("winner_team")}
+                for r in db.list_official_results()}
+    ENG = engine.build()
+    _gp, kp, _bv = ENG["resolve"]({}, official_results=official, standings_override=db.list_group_standings())
+    slot_teams = {int(r.match_id): {r.predicted_home_team, r.predicted_away_team}
+                  for r in kp.itertuples(index=False)}
+
+    applied, skipped = 0, []
+    with open(path, encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#") or line.lower().startswith("match_id,"):
+                continue
+            parts = next(csv.reader([line]))
+            if len(parts) < 5:
+                continue
+            mid = int(parts[0])
+            home, away, hg, ag = parts[1].strip(), parts[2].strip(), int(parts[3]), int(parts[4])
+            winner_team = parts[5].strip() if len(parts) > 5 and parts[5].strip() else None
+            if hg == ag and not winner_team:
+                skipped.append(f"match {mid}: {home} vs {away} ({hg}-{ag}) needs winner_team (penalties)")
+                continue
+            round_name = round_of.get(mid)
+            if not round_name:
+                skipped.append(f"match {mid}: not a known knockout match_id")
+                continue
+            resolved = slot_teams.get(mid)
+            if resolved and {home, away} != resolved:
+                skipped.append(f"match {mid}: {home} vs {away} doesn't match the bracket's resolved "
+                                f"slot {resolved} (group results/standings may have changed)")
+                continue
+            db.upsert_official_result(mid, round_name, home, away, hg, ag, locked=True, winner_team=winner_team)
+            applied += 1
+
+    print(f"Seeded {applied} official knockout results from {path.name}.")
+    for s in skipped:
+        print(f"  skipped: {s}")
+    print("Restart the app (or it picks up on next change) to apply.")
+
+
+def _find_dataset(name: str) -> Path:
+    return Path(__file__).resolve().parent / "datasets" / name
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Live DB maintenance for the WC2026 predictor.")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -218,6 +286,8 @@ def main() -> None:
     ss.add_argument("csv", nargs="?", default=None)
     sr = sub.add_parser("seed-results", help="apply real group match results from a CSV")
     sr.add_argument("csv", nargs="?", default=None)
+    sk = sub.add_parser("seed-knockout-results", help="apply real knockout match results from a CSV")
+    sk.add_argument("csv", nargs="?", default=None)
     args = ap.parse_args()
 
     if args.cmd == "stats":
@@ -230,6 +300,8 @@ def main() -> None:
         seed_standings(args.csv)
     elif args.cmd == "seed-results":
         seed_results(args.csv)
+    elif args.cmd == "seed-knockout-results":
+        seed_knockout_results(args.csv)
 
 
 if __name__ == "__main__":
