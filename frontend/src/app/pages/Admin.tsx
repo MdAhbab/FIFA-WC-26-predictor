@@ -703,6 +703,39 @@ function StandingsPanel({ token, ok, err }: { token: string; ok: (m: string) => 
 }
 
 // ============================================================
+// Match-ID Legend — reference table so admins know which ID = which fixture
+// ============================================================
+const ID_LEGEND: { range: string; label: string; accent: string }[] = [
+  { range: "1–72",   label: "Group Stage",        accent: "var(--muted-foreground)" },
+  { range: "73–88",  label: "Round of 32",        accent: "var(--foil-blue)" },
+  { range: "89–96",  label: "Round of 16",        accent: "var(--foil-magenta)" },
+  { range: "97–100", label: "Quarter-finals",     accent: "var(--foil-gold)" },
+  { range: "101–102",label: "Semi-finals",        accent: "var(--pitch)" },
+  { range: "103",    label: "Third-place playoff", accent: "var(--muted-foreground)" },
+  { range: "104",    label: "Final",              accent: "var(--stamp-red)" },
+];
+
+function MatchIdLegend() {
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      className="mt-6 rounded-[14px] border-2 border-foreground/15 bg-card overflow-hidden">
+      <div className="flex items-center gap-2 px-5 py-3 border-b-2 border-foreground/10">
+        <ListOrdered className="size-4 text-muted-foreground" />
+        <span className="display text-sm tracking-[0.15em] uppercase text-muted-foreground">Match ID Reference</span>
+      </div>
+      <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        {ID_LEGEND.map(({ range, label, accent }) => (
+          <div key={range} className="rounded-md border border-foreground/10 bg-background/50 px-2.5 py-2 text-center">
+            <div className="mono text-sm tabular-nums font-bold" style={{ color: accent }}>{range}</div>
+            <div className="display text-[9px] tracking-[0.15em] uppercase text-muted-foreground mt-0.5 leading-tight">{label}</div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================================
 // Vote Control Panel
 // ============================================================
 function VotePanel({ token, ok, err }: { token: string; ok: (m: string) => void; err: (m: string) => void }) {
@@ -776,6 +809,7 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
         </div>
       </div>
 
+      <MatchIdLegend />
       <ToastStack toasts={toasts} />
     </div>
   );

@@ -457,8 +457,21 @@ export function deriveBracket(state: PicksState): DerivedBracket {
 
   // Internal id kept as "K{n}" so koCompetitionId round-trips (K1..K16 = 73..88, ..., K31 = 104).
   const internalId = (mid: number) => `K${mid === 104 ? 31 : mid - 72}`;
+  const BRACKET_ORDER = [
+    // R32
+    73, 75, 74, 77, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87,
+    // R16
+    89, 90, 93, 94, 91, 92, 95, 96,
+    // QF
+    97, 98, 99, 100,
+    // SF
+    101, 102,
+    // 3rd / Final
+    103, 104
+  ];
+
   const templateRound = (name: string) =>
-    template.filter((t) => t.round === name).sort((a, b) => a.matchId - b.matchId);
+    template.filter((t) => t.round === name).sort((a, b) => BRACKET_ORDER.indexOf(a.matchId) - BRACKET_ORDER.indexOf(b.matchId));
 
   const buildRound = (
     roundName: string,

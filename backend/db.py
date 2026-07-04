@@ -354,22 +354,6 @@ def has_voted_recently(ip: str) -> tuple[bool, int]:
     return False, 0
 
 
-def make_unique_name(requested_name: str) -> str:
-    requested_name = (requested_name or "").strip()
-    if not requested_name:
-        return "Anonymous"
-    with _LOCK, _conn() as c:
-        rows = c.execute("SELECT name FROM votes WHERE name IS NOT NULL").fetchall()
-    existing_lowercased = {r["name"].lower() for r in rows if r["name"]}
-    if requested_name.lower() not in existing_lowercased:
-        return requested_name
-    i = 1
-    while True:
-        candidate = f"{requested_name}{i}"
-        if candidate.lower() not in existing_lowercased:
-            return candidate
-        i += 1
-
 
 def _top4_of(row: dict) -> list[str]:
     """A voter's top-4 picks. Play votes store an explicit `top4` (their bracket's final four) in the
