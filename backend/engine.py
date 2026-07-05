@@ -711,7 +711,9 @@ def make_resolver(group_df, knock_df, groups, state, model, effective_elo, ratin
             ph_t.append(home); pa_t.append(away); hg2.append(a); ag2.append(b)
             cor2.append(best_count(corners_mu(lh, la, True), 'corners'))
             yel2.append(best_count(yellow_mu(ph, pd_, pa, True), 'cards')); red2.append(0)
-            mw_.append(ws); pen_.append(bool(float(np.trace(Aet)) > 0.5))
+            # Penalties iff the resolved scoreline is level after ET — keeps the flag coherent with
+            # the score we actually output (incl. official results), not the model's draw probability.
+            mw_.append(ws); pen_.append(bool(a == b))
         kp['predicted_home_team'] = ph_t; kp['predicted_away_team'] = pa_t
         kp['predicted_home_goals'] = hg2; kp['predicted_away_goals'] = ag2
         kp['corners'] = cor2; kp['yellow_cards'] = yel2; kp['red_cards'] = red2

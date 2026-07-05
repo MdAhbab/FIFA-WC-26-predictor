@@ -262,7 +262,10 @@ def seed_knockout_results(csv_path: str | None) -> None:
                 skipped.append(f"match {mid}: {home} vs {away} doesn't match the bracket's resolved "
                                 f"slot {resolved} (group results/standings may have changed)")
                 continue
-            db.upsert_official_result(mid, round_name, home, away, hg, ag, locked=True, winner_team=winner_team)
+            # winner_team means "shootout winner": only meaningful on a level score. Storing it on a
+            # decisive result makes the app render a penalties marker on a match that never had one.
+            db.upsert_official_result(mid, round_name, home, away, hg, ag, locked=True,
+                                      winner_team=winner_team if hg == ag else None)
             applied += 1
 
     print(f"Seeded {applied} official knockout results from {path.name}.")

@@ -458,8 +458,8 @@ export function deriveBracket(state: PicksState): DerivedBracket {
   // Internal id kept as "K{n}" so koCompetitionId round-trips (K1..K16 = 73..88, ..., K31 = 104).
   const internalId = (mid: number) => `K${mid === 104 ? 31 : mid - 72}`;
   const BRACKET_ORDER = [
-    // R32
-    73, 75, 74, 77, 83, 84, 81, 82, 76, 78, 79, 80, 86, 88, 85, 87,
+    // R32 (adjacent pairs feed the same R16 tie: 73/76→89, 75/78→90, 83/84→93, 82/81→94, ...)
+    73, 76, 75, 78, 83, 84, 82, 81, 74, 77, 79, 80, 87, 86, 85, 88,
     // R16
     89, 90, 93, 94, 91, 92, 95, 96,
     // QF

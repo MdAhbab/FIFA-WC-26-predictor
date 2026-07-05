@@ -520,7 +520,7 @@ function KnockoutResultsPanel({ token, ok, err }: { token: string; ok: (m: strin
               className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md border-2 text-sm text-left transition-all ${isSelected ? "border-foreground bg-muted" : "border-foreground/10 hover:border-foreground/30"}`}>
               <span className="min-w-0 truncate"><span className="mono text-[10px] text-muted-foreground mr-1.5">#{m.match_id}</span>{m.home} <span className="text-muted-foreground">vs</span> {m.away}</span>
               {res ? (
-                <span className="display text-sm font-bold shrink-0" style={{ color: "var(--pitch)" }}>{res.hg}–{res.ag}{res.winner_team ? " (P)" : ""}{res.locked ? " 🔒" : ""}</span>
+                <span className="display text-sm font-bold shrink-0" style={{ color: "var(--pitch)" }}>{res.hg}–{res.ag}{res.hg === res.ag && res.winner_team ? " (P)" : ""}{res.locked ? " 🔒" : ""}</span>
               ) : (
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider shrink-0">pending</span>
               )}
