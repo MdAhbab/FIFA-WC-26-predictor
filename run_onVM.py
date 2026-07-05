@@ -150,6 +150,13 @@ def main():
     print("  View logs: docker compose -f docker-compose.yml logs -f")
     print("=" * 64)
 
+    print("\n[run_onVM] Setting up HTTPS (Nginx + Certbot)...")
+    ssl_result = subprocess.run(["bash", "deploy/setup_ssl.sh"], cwd=ROOT)
+    if ssl_result.returncode != 0:
+        print("[run_onVM] Warning: HTTPS setup encountered an error.")
+    else:
+        print("[run_onVM] HTTPS setup completed successfully.")
+
 
 if __name__ == "__main__":
     main()
